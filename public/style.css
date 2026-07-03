@@ -76,9 +76,9 @@ body {
 
 /* ---------- Dashboard layout ---------- */
 .wrap {
-  max-width: 920px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 32px 20px 60px;
+  padding: 32px 32px 60px;
 }
 header.top {
   display: flex;
@@ -142,7 +142,7 @@ header.top h1 {
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 18px;
   margin-bottom: 22px;
 }
@@ -243,6 +243,19 @@ select.role-select {
 .backup-list { list-style: none; margin: 10px 0 0; padding: 0; font-size: 0.85rem; }
 .backup-list li { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); color: var(--muted); }
 .backup-list li:last-child { border-bottom: none; }
+.player-name { cursor: pointer; color: var(--text); text-decoration: underline dotted; }
+.player-name:hover { color: var(--accent); }
+.player-menu {
+  position: absolute; z-index: 100; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.35); overflow: hidden; min-width: 170px;
+}
+.player-menu button {
+  background: none; border: none; color: var(--text); text-align: left;
+  padding: 9px 14px; font-size: 0.85rem; cursor: pointer;
+}
+.player-menu button:hover { background: var(--panel-alt); }
+.player-menu button.danger { color: var(--danger); }
 .backup-list a { color: var(--accent); text-decoration: none; }
 
 .checklist { list-style: none; margin: 0 0 14px; padding: 0; font-size: 0.88rem; }
@@ -349,6 +362,11 @@ select.role-select {
 .switch-row { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; cursor: pointer; margin-bottom: 4px; }
 .field-block { margin-top: 16px; }
 .field-label { display: block; color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+.share-row { display: flex; align-items: center; gap: 8px; }
+.share-row code {
+  flex: 1; background: var(--panel-alt); border: 1px solid var(--line); border-radius: 6px;
+  padding: 8px 10px; font-family: var(--font-mono); font-size: 0.85rem; word-break: break-all;
+}
 .days-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .day-btn {
   background: var(--panel-alt); border: 1px solid var(--line); color: var(--muted);

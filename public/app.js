@@ -124,12 +124,15 @@ function renderPlayers(players) {
          </div>`
       : '';
     tr.innerHTML = `
-      <td>${escapeHtml(p.name || '—')}</td>
+      <td><span class="player-name" data-userid="${escapeHtml(p.userId || '')}" data-name="${escapeHtml(p.name || '')}">${escapeHtml(p.name || '—')}</span></td>
       <td>${p.level ?? '—'}</td>
       <td>${p.ping ?? '—'}</td>
       <td>${actions}</td>
     `;
     playersBody.appendChild(tr);
+  });
+  playersBody.querySelectorAll('.player-name').forEach(el => {
+    el.addEventListener('click', () => showPlayerMenu(el, el.dataset.userid, el.dataset.name));
   });
   document.querySelectorAll('.kick-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -241,6 +244,60 @@ async function refreshDiskSpace() {
   banner.style.display = 'block';
 }
 
+async function refreshNetworkInfo() {
+  const data = await api('GET', '/api/network-info');
+  if (!data) return;
+  document.getElementById('localAddr').textContent = `http://${data.localIp}:${data.port}`;
+  document.getElementById('publicAddr').textContent = data.publicIp ? `http://${data.publicIp}:${data.port}` : 'Indisponible (pas de connexion internet ?)';
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(
+    () => showToast('Copié !'),
+    () => showToast('Impossible de copier')
+  );
+}
+
+document.getElementById('copyLocalBtn').addEventListener('click', () => copyToClipboard(document.getElementById('localAddr').textContent));
+document.getElementById('copyPublicBtn').addEventListener('click', () => copyToClipboard(document.getElementById('publicAddr').textContent));
+
+// ---------- Plugins (UE4SS / PalDefender) ----------
+async function refreshPlugins() {
+  if (!isManager()) return;
+  const data = await api('GET', '/api/plugins/status');
+  if (!data) return;
+  ['ue4ss', 'paldefender'].forEach(name => {
+    const info = data[name];
+    const statusEl = document.getElementById(`${name}Status`);
+    const uninstallBtn = document.getElementById(`${name}UninstallBtn`);
+    statusEl.textContent = info.installed
+      ? `✅ Installé${info.installedVersion ? ' — ' + info.installedVersion : ''}`
+      : '⭕ Non installé';
+    uninstallBtn.style.display = info.installed ? 'inline-block' : 'none';
+  });
+}
+
+async function installPlugin(name, label) {
+  if (!confirm(`Installer/mettre à jour ${label} vers la dernière version ? Le serveur doit être éteint.`)) return;
+  const r = await api('POST', `/api/plugins/${name}/install`, {});
+  if (r && r.ok) { showToast(`${label} ${r.version} installé`); refreshActivity(); }
+  else showToast(r && r.error === 'server_running' ? 'Impossible : arrête le serveur d\'abord' : `Échec de l'installation de ${label}`);
+  refreshPlugins();
+}
+
+async function uninstallPlugin(name, label) {
+  if (!confirm(`Désinstaller ${label} ? Le serveur doit être éteint.`)) return;
+  const r = await api('POST', `/api/plugins/${name}/uninstall`, {});
+  if (r && r.ok) { showToast(`${label} désinstallé`); refreshActivity(); }
+  else showToast(r && r.error === 'server_running' ? 'Impossible : arrête le serveur d\'abord' : `Échec de la désinstallation de ${label}`);
+  refreshPlugins();
+}
+
+document.getElementById('ue4ssInstallBtn').addEventListener('click', () => installPlugin('ue4ss', 'UE4SS'));
+document.getElementById('ue4ssUninstallBtn').addEventListener('click', () => uninstallPlugin('ue4ss', 'UE4SS'));
+document.getElementById('paldefenderInstallBtn').addEventListener('click', () => installPlugin('paldefender', 'PalDefender'));
+document.getElementById('paldefenderUninstallBtn').addEventListener('click', () => uninstallPlugin('paldefender', 'PalDefender'));
+
 async function refreshActivity() {
   const data = await api('GET', '/api/activity');
   if (!data) return;
@@ -270,6 +327,8 @@ async function refreshActivity() {
     'restart-schedule-change': 'a modifié le planning de redémarrage',
     'backup-restore': 'a restauré une sauvegarde',
     'backup-restore-error': 'a échoué à restaurer une sauvegarde',
+    'plugin-install': 'a installé un plugin',
+    'plugin-uninstall': 'a désinstallé un plugin',
     'disk-space-low': 'alerte espace disque faible',
     'auto-restart': 'redémarrage automatique (watchdog)',
     'restart-warning': 'annonce de redémarrage planifié',
@@ -289,9 +348,64 @@ async function refreshActivity() {
   });
 }
 
+// Menu contextuel sur un nom de joueur (historique) : stats globales + ban rapide.
+function closePlayerMenu() {
+  const existing = document.getElementById('playerMenu');
+  if (existing) existing.remove();
+  document.removeEventListener('click', closePlayerMenuOnOutsideClick);
+}
+function closePlayerMenuOnOutsideClick(e) {
+  if (!e.target.closest('#playerMenu') && !e.target.classList.contains('player-name')) closePlayerMenu();
+}
+
+function showPlayerMenu(anchorEl, userId, name) {
+  closePlayerMenu();
+  const menu = document.createElement('div');
+  menu.id = 'playerMenu';
+  menu.className = 'player-menu';
+
+  const statsBtn = document.createElement('button');
+  statsBtn.type = 'button';
+  statsBtn.textContent = '📊 Voir les stats';
+  statsBtn.addEventListener('click', () => {
+    closePlayerMenu();
+    const totals = (lastHistoryData && lastHistoryData.totals) || {};
+    const sessions = ((lastHistoryData && lastHistoryData.sessions) || []).filter(s => s.userId === userId);
+    const minutes = totals[userId] || 0;
+    const hours = (minutes / 60).toFixed(1);
+    const lastSeen = sessions[0] ? new Date(sessions[0].joined).toLocaleString('fr-FR') : 'inconnue';
+    alert(`${name}\n\nTemps de jeu total : ${hours} h\nSessions récentes trouvées : ${sessions.length}\nDernière connexion : ${lastSeen}`);
+  });
+  menu.appendChild(statsBtn);
+
+  if (isManager()) {
+    const banBtn = document.createElement('button');
+    banBtn.type = 'button';
+    banBtn.className = 'danger';
+    banBtn.textContent = '🔨 Bannir';
+    banBtn.addEventListener('click', async () => {
+      closePlayerMenu();
+      if (!confirm(`Bannir ${name} ? Il sera déconnecté (s'il est en ligne) et ne pourra plus se reconnecter.`)) return;
+      const r = await api('POST', '/api/ban', { userid: userId, name });
+      if (r && r.ok) { showToast('Joueur banni'); refreshStatus(); refreshBans(); refreshActivity(); }
+      else showToast('Échec du ban');
+    });
+    menu.appendChild(banBtn);
+  }
+
+  document.body.appendChild(menu);
+  const rect = anchorEl.getBoundingClientRect();
+  menu.style.top = `${window.scrollY + rect.bottom + 4}px`;
+  menu.style.left = `${window.scrollX + rect.left}px`;
+  setTimeout(() => document.addEventListener('click', closePlayerMenuOnOutsideClick), 0);
+}
+
+let lastHistoryData = null;
+
 async function refreshPlayerHistory() {
   const data = await api('GET', '/api/players/history');
   if (!data) return;
+  lastHistoryData = data;
 
   totalsList.innerHTML = '';
   const totalsEntries = Object.entries(data.totals || {});
@@ -308,7 +422,8 @@ async function refreshPlayerHistory() {
       .forEach(([userId, minutes]) => {
         const li = document.createElement('li');
         const hours = (minutes / 60).toFixed(1);
-        li.innerHTML = `<span>${escapeHtml(nameByUserId[userId] || userId)}</span><span>${hours} h au total</span>`;
+        const name = nameByUserId[userId] || userId;
+        li.innerHTML = `<span class="player-name" data-userid="${escapeHtml(userId)}" data-name="${escapeHtml(name)}">${escapeHtml(name)}</span><span>${hours} h au total</span>`;
         totalsList.appendChild(li);
       });
   }
@@ -321,10 +436,14 @@ async function refreshPlayerHistory() {
       const li = document.createElement('li');
       const joined = new Date(s.joined).toLocaleString('fr-FR');
       const status = s.left ? `parti à ${new Date(s.left).toLocaleTimeString('fr-FR')}` : 'en ligne';
-      li.innerHTML = `<span>${escapeHtml(s.name)}</span><span>${joined} — ${status}</span>`;
+      li.innerHTML = `<span class="player-name" data-userid="${escapeHtml(s.userId)}" data-name="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span><span>${joined} — ${status}</span>`;
       sessionsList.appendChild(li);
     });
   }
+
+  document.querySelectorAll('#tab-activity .player-name').forEach(el => {
+    el.addEventListener('click', () => showPlayerMenu(el, el.dataset.userid, el.dataset.name));
+  });
 }
 
 function actionError(r, fallback) {
@@ -813,18 +932,21 @@ setupForm.addEventListener('submit', async (e) => {
 });
 
 // ---------- Planificateur de sauvegardes automatiques ----------
+// Index 0=dimanche..6=samedi (convention JS/cron, utilisée telle quelle par le backend) — mais
+// affichée dans l'ordre lundi->dimanche (convention FR), via DAY_ORDER ci-dessous.
 const DAY_LABELS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 // Widgets réutilisés par les deux planificateurs (sauvegardes et redémarrage) : sélecteur de
 // jours et liste d'heures avec ajout/retrait.
 function renderDayPicker(containerId, selectedDays, onToggle) {
   const row = document.getElementById(containerId);
   row.innerHTML = '';
-  DAY_LABELS.forEach((label, i) => {
+  DAY_ORDER.forEach(i => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'day-btn' + (selectedDays.includes(i) ? ' on' : '');
-    btn.textContent = label;
+    btn.textContent = DAY_LABELS[i];
     btn.addEventListener('click', () => onToggle(i));
     row.appendChild(btn);
   });
@@ -849,7 +971,7 @@ function renderTimeChips(containerId, times, onRemove) {
 }
 
 function daysSummary(days) {
-  return days.length >= 7 ? 'tous les jours' : days.map(d => DAY_LABELS[d]).join(', ');
+  return days.length >= 7 ? 'tous les jours' : DAY_ORDER.filter(d => days.includes(d)).map(d => DAY_LABELS[d]).join(', ');
 }
 
 // ---------- Sauvegardes automatiques ----------
@@ -984,6 +1106,7 @@ function activateTab(name) {
   // La console n'est chargée qu'à la demande (fichier potentiellement volumineux), au moment où
   // l'onglet Activité devient visible plutôt que par un intervalle qui tournerait en permanence.
   if (name === 'activity' && isManager()) refreshConsole();
+  if (name === 'plugins') refreshPlugins();
 }
 
 async function refreshConsole() {
@@ -1020,6 +1143,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   refreshRestartSchedule();
   refreshSetupStatus();
   refreshDiskSpace();
+  refreshNetworkInfo();
   setInterval(refreshStatus, 15000);
   setInterval(refreshActivity, 30000);
   setInterval(refreshPlayerHistory, 30000);

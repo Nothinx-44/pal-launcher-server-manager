@@ -1,6 +1,6 @@
 {
   "name": "pal-launcher-server-manager",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Pal Launcher Server Manager — pilote un serveur Palworld dédié (start/stop/restart, sauvegardes, joueurs) depuis une appli desktop, aucun prérequis",
   "author": "Vincent",
   "main": "electron/main.js",

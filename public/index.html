@@ -25,6 +25,7 @@
       <button class="tab-btn" data-tab="activity">Activité</button>
       <button class="tab-btn" data-tab="backups">Sauvegardes</button>
       <button class="tab-btn" data-tab="settings" data-manager-only>Réglages</button>
+      <button class="tab-btn" data-tab="plugins" data-manager-only>Plugins</button>
       <button class="tab-btn" data-tab="accounts">Comptes</button>
     </nav>
 
@@ -41,6 +42,25 @@
             <li><span>FPS serveur</span><b id="infoFps">—</b></li>
             <li><span>Jours en jeu</span><b id="infoDays">—</b></li>
           </ul>
+        </div>
+
+        <div class="panel">
+          <h2>Adresses à partager</h2>
+          <div class="field-block">
+            <span class="field-label">Sur ce réseau (amis chez toi / sur ta Wi-Fi)</span>
+            <div class="share-row">
+              <code id="localAddr">—</code>
+              <button class="action" id="copyLocalBtn" type="button">Copier</button>
+            </div>
+          </div>
+          <div class="field-block">
+            <span class="field-label">Depuis internet (après redirection de port sur ta box)</span>
+            <div class="share-row">
+              <code id="publicAddr">—</code>
+              <button class="action" id="copyPublicBtn" type="button">Copier</button>
+            </div>
+            <p class="muted-hint" style="margin-top:6px;">Le port ci-dessus est celui du dashboard sur ce PC — vérifie que c'est bien celui redirigé sur ta box (voir le README, section « Exposer le dashboard »).</p>
+          </div>
         </div>
 
         <div class="panel">
@@ -261,6 +281,32 @@
         <p class="empty" id="settingsHint" style="margin-top:10px;">Modifiable uniquement serveur éteint (Palworld ne relit ce fichier qu'au démarrage).</p>
         <div class="settings-grid" id="settingsList" style="display:none;"></div>
       </div>
+    </section>
+
+    <!-- ============ PLUGINS ============ -->
+    <section class="tab-content" id="tab-plugins">
+      <div class="grid">
+        <div class="panel">
+          <h2>UE4SS <span class="muted-hint">(mods Lua/Blueprint)</span></h2>
+          <p class="empty" id="ue4ssStatus">—</p>
+          <div class="btn-row">
+            <button class="action primary" id="ue4ssInstallBtn" type="button">Installer / mettre à jour</button>
+            <button class="action danger" id="ue4ssUninstallBtn" type="button" style="display:none;">Désinstaller</button>
+          </div>
+          <p class="muted-hint" style="display:block; margin-top:10px;">Open source (MIT). Ajoute un dossier <code>Mods/</code> avec quelques mods d'exemple ; les tiens peuvent être ajoutés par la suite directement dans ce dossier.</p>
+        </div>
+
+        <div class="panel">
+          <h2>PalDefender <span class="muted-hint">(anti-triche)</span></h2>
+          <p class="empty" id="paldefenderStatus">—</p>
+          <div class="btn-row">
+            <button class="action primary" id="paldefenderInstallBtn" type="button">Installer / mettre à jour</button>
+            <button class="action danger" id="paldefenderUninstallBtn" type="button" style="display:none;">Désinstaller</button>
+          </div>
+          <p class="muted-hint" style="display:block; margin-top:10px;">⚠️ Binaire fermé (code non public) fourni par ses auteurs — installé directement depuis leur release GitHub officielle, jamais modifié par ce dashboard.</p>
+        </div>
+      </div>
+      <p class="muted-hint">Installation/désinstallation possibles uniquement serveur éteint (les fichiers sont chargés par le processus en cours d'exécution).</p>
     </section>
 
     <!-- ============ COMPTES ============ -->

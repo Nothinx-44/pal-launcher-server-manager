@@ -25,6 +25,8 @@ const backupSchedule = require('./lib/backupSchedule');
 const restartScheduleCfg = require('./lib/restartSchedule');
 const diskSpace = require('./lib/diskSpace');
 const backupRestore = require('./lib/backupRestore');
+const networkInfo = require('./lib/networkInfo');
+const plugins = require('./lib/plugins');
 const logTail = require('./lib/logTail');
 
 // ---------- Config ----------
@@ -785,6 +787,16 @@ app.post('/api/backup/schedule', requireAuth, requireManager, (req, res) => {
 });
 
 // ---------- Journal d'activité (lecture pour tout le monde) ----------
+// Adresses à partager avec les amis (locale pour le réseau domestique, publique pour internet
+// après redirection de port sur la box).
+app.get('/api/network-info', requireAuth, async (req, res) => {
+  res.json({
+    localIp: networkInfo.getLocalIp(),
+    publicIp: await networkInfo.getPublicIp(),
+    port: PORT
+  });
+});
+
 app.get('/api/activity', requireAuth, (req, res) => {
   res.json({ entries: activityLog.list(50) });
 });
@@ -799,6 +811,34 @@ app.get('/api/console', requireAuth, requireManager, (req, res) => {
   const lines = logTail.readTail(logPath, 100 * 1024);
   if (lines === null) return res.status(404).json({ error: 'log_not_found' });
   res.json({ lines: lines.slice(-300), path: logPath });
+});
+
+// ---------- Plugins (UE4SS / PalDefender), admin/user, serveur éteint pour installer/retirer ----------
+app.get('/api/plugins/status', requireAuth, requireManager, (req, res) => {
+  res.json({ ue4ss: plugins.getStatus('ue4ss'), paldefender: plugins.getStatus('paldefender') });
+});
+
+app.post('/api/plugins/:name/install', requireAuth, requireManager, async (req, res) => {
+  const name = req.params.name;
+  if (!plugins.PLUGINS[name]) return res.status(404).json({ error: 'unknown_plugin' });
+  if (await isGameServerActive()) return res.status(409).json({ error: 'server_running' });
+  try {
+    const version = await plugins.install(name);
+    activityLog.log(req.session.user.username, 'plugin-install', `${plugins.PLUGINS[name].label} ${version}`);
+    discord.notify(`🧩 **${plugins.PLUGINS[name].label} ${version}** installé par **${req.session.user.username}**`);
+    res.json({ ok: true, version });
+  } catch (err) {
+    res.status(500).json({ error: String(err.message || err) });
+  }
+});
+
+app.post('/api/plugins/:name/uninstall', requireAuth, requireManager, async (req, res) => {
+  const name = req.params.name;
+  if (!plugins.PLUGINS[name]) return res.status(404).json({ error: 'unknown_plugin' });
+  if (await isGameServerActive()) return res.status(409).json({ error: 'server_running' });
+  plugins.uninstall(name);
+  activityLog.log(req.session.user.username, 'plugin-uninstall', plugins.PLUGINS[name].label);
+  res.json({ ok: true });
 });
 
 // ---------- Historique des joueurs (lecture pour tout le monde) ----------
