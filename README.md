@@ -5,25 +5,30 @@ sauvegardes manuelles + planifiées, joueurs connectés, annonces, kick. Accessi
 directement via **l'IP publique fixe de ta box** (redirection de port), en HTTP simple — pas de
 nom de domaine ni de certificat nécessaire.
 
-## 0. Le plus simple : l'application de lancement (.exe)
+## 0. Le plus simple : l'application de lancement (installeur)
 
 Pour ne rien avoir à installer ni à taper en ligne de commande, utilise l'application desktop
-**`PalworldDashboardLauncher.exe`** (disponible dans les *Releases* GitHub). Elle regroupe toute la
-mise en place dans une interface graphique :
+**`PalworldDashboardLauncher-Setup.exe`** (disponible dans les *Releases* GitHub). C'est un
+installeur classique (pas un exécutable portable) : les fichiers sont extraits **une seule fois**
+à l'installation, donc les lancements suivants sont quasi instantanés.
 
-1. Fais un **clic droit → « Exécuter en tant qu'administrateur »** (nécessaire pour créer les
-   services Windows et la règle de pare-feu).
-2. **Étape 1** : une checklist montre l'état actuel (droits admin, SteamCMD, serveur, services…).
-3. **Étape 2 – Installer** : remplis les réglages essentiels (dossiers, mots de passe, ports) et
-   clique sur *Lancer l'installation*. L'appli télécharge NSSM automatiquement, installe SteamCMD +
-   le serveur Palworld, configure `PalWorldSettings.ini`, crée **les deux services Windows**
-   (serveur de jeu + dashboard) et la règle de pare-feu — tout en direct sous forme de log.
-4. **Étape 3 – Lancer** : crée un compte admin, démarre le dashboard, et ouvre-le dans le
-   navigateur. L'appli affiche l'URL locale à partager après redirection de port.
+1. Double-clique le Setup : Windows demande l'élévation (UAC) automatiquement (nécessaire pour
+   créer les services Windows et la règle de pare-feu).
+2. Suis l'assistant d'installation (dossier d'installation modifiable, raccourcis Bureau/menu
+   Démarrer créés).
+3. Une fois installé, lance **« Palworld Dashboard »** depuis le menu Démarrer (plus besoin de
+   relancer le Setup) :
+   - **Étape 1** : une checklist montre l'état actuel (droits admin, SteamCMD, serveur, services…).
+   - **Étape 2 – Installer le serveur** : remplis les réglages essentiels (dossiers, mots de passe,
+     ports) et clique sur *Lancer l'installation*. L'appli télécharge NSSM automatiquement, installe
+     SteamCMD + le serveur Palworld, configure `PalWorldSettings.ini`, crée **les deux services
+     Windows** (serveur de jeu + dashboard) et la règle de pare-feu — tout en direct sous forme de log.
+   - **Étape 3 – Lancer** : crée un compte admin, démarre le dashboard, et ouvre-le dans le
+     navigateur. L'appli affiche l'URL locale à partager après redirection de port.
 
-Aucun prérequis : Node.js et les dépendances sont embarqués dans l'`.exe`. La config et les données
-sont stockées dans `C:\ProgramData\PalworldDashboard`, et le service dashboard redémarre tout seul
-au boot de la machine.
+Aucun prérequis : Node.js et les dépendances sont embarqués. La config et les données sont
+stockées dans `C:\ProgramData\PalworldDashboard` (indépendant du dossier d'installation de
+l'appli), et le service dashboard redémarre tout seul au boot de la machine.
 
 > SmartScreen peut afficher un avertissement au 1er lancement (`.exe` non signé) : *Informations
 > complémentaires → Exécuter quand même*.

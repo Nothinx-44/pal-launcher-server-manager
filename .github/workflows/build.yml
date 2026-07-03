@@ -1,6 +1,6 @@
-name: Build portable exe
+name: Build installer
 
-# Construit PalworldDashboardLauncher.exe et l'attache à la release GitHub.
+# Construit PalworldDashboardLauncher-Setup.exe et l'attache à la release GitHub.
 # Se déclenche quand tu publies une release (ou manuellement depuis l'onglet Actions).
 on:
   release:
@@ -29,17 +29,17 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build portable exe
+      - name: Build installer
         run: npm run dist
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PalworldDashboardLauncher
-          path: dist/PalworldDashboardLauncher.exe
+          name: PalworldDashboardLauncher-Setup
+          path: dist/PalworldDashboardLauncher-Setup.exe
 
       - name: Attach to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/PalworldDashboardLauncher.exe
+          files: dist/PalworldDashboardLauncher-Setup.exe

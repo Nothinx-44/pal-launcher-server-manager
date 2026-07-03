@@ -1,6 +1,6 @@
 {
   "name": "palworld-dashboard",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Dashboard web pour gérer un serveur Palworld dédié (start/stop/restart, sauvegardes, joueurs) + lanceur desktop d'installation",
   "author": "Vincent",
   "main": "electron/main.js",
@@ -12,7 +12,7 @@
     "electron:dev": "electron .",
     "fetch-node": "node scripts/fetch-node.js",
     "icon": "node scripts/generate-icon.js",
-    "dist": "npm run icon && npm run fetch-node && electron-builder --win portable"
+    "dist": "npm run icon && npm run fetch-node && electron-builder --win nsis"
   },
   "dependencies": {
     "archiver": "^7.0.1",
@@ -47,12 +47,18 @@
       }
     ],
     "win": {
-      "target": "portable",
+      "target": "nsis",
       "icon": "build/icon.ico",
       "requestedExecutionLevel": "requireAdministrator"
     },
-    "portable": {
-      "artifactName": "PalworldDashboardLauncher.exe"
+    "nsis": {
+      "artifactName": "PalworldDashboardLauncher-Setup.exe",
+      "shortcutName": "Palworld Dashboard",
+      "perMachine": true,
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
 }
