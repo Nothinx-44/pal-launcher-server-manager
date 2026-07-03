@@ -350,13 +350,12 @@
           <div class="field-block" data-admin-only>
             <span class="field-label">API de commandes (pour l'onglet Tableau de bord)</span>
             <p class="empty" id="paldefenderApiStatus" style="margin:0 0 8px;">—</p>
-            <button class="action primary" id="paldefenderDetectBtn" type="button">Détecter automatiquement</button>
-            <form id="paldefenderConfigForm" class="btn-row" style="flex-wrap:wrap; margin-top:8px;">
-              <input type="text" id="paldefenderTokenInput" placeholder="…ou colle un jeton manuellement" style="flex:1; min-width:260px;">
+            <form id="paldefenderConfigForm" class="btn-row" style="flex-wrap:wrap;">
+              <input type="text" id="paldefenderTokenInput" placeholder="Colle ton jeton ici" style="flex:1; min-width:260px;">
               <input type="text" id="paldefenderUrlInput" placeholder="http://127.0.0.1:17993">
-              <button class="action" type="submit">Enregistrer</button>
+              <button class="action primary" type="submit">Enregistrer</button>
             </form>
-            <p class="muted-hint" style="display:block; margin-top:8px;">La détection lit le jeton dans <code>PalDefender/RESTAPI/Tokens/</code> (il faut avoir activé l'API dans <code>RESTConfig.json</code> et créé un jeton, voir la doc PalDefender). Le dashboard ne modifie jamais les fichiers du plugin.</p>
+            <p class="muted-hint" style="display:block; margin-top:8px;">Le jeton se trouve dans <code>Pal/Binaries/Win64/PalDefender/RESTAPI/Tokens/</code> (après avoir activé l'API dans <code>RESTConfig.json</code> et créé un jeton, voir la doc PalDefender). Le dashboard ne touche jamais aux fichiers du plugin.</p>
           </div>
         </div>
       </div>

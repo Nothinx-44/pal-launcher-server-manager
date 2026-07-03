@@ -337,23 +337,6 @@ async function refreshPaldefenderApiStatus() {
   if (form) form.style.display = pdApiConfigured ? 'flex' : 'none';
 }
 
-document.getElementById('paldefenderDetectBtn').addEventListener('click', async () => {
-  const r = await api('POST', '/api/paldefender/detect', {});
-  if (r && r.ok) {
-    showToast(r.enabled
-      ? `Jeton détecté (${r.file}) et enregistré`
-      : `Jeton détecté (${r.file}) — pense à mettre Enabled: true dans RESTConfig.json puis à redémarrer le serveur`);
-  } else {
-    const msgs = {
-      server_not_installed: 'Serveur non installé',
-      no_rest_config: 'RESTConfig.json introuvable — démarre le serveur une fois avec PalDefender installé',
-      no_token_file: 'Aucun jeton trouvé dans Tokens/ — crée-en un (voir doc PalDefender) ou colle-le manuellement'
-    };
-    showToast(msgs[r && r.error] || 'Échec de la détection');
-  }
-  refreshPaldefenderApiStatus();
-});
-
 document.getElementById('paldefenderConfigForm').addEventListener('submit', async e => {
   e.preventDefault();
   const token = document.getElementById('paldefenderTokenInput').value.trim();

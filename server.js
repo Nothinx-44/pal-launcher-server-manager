@@ -952,19 +952,6 @@ app.post('/api/paldefender/config', requireAuth, requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
-// Détection automatique : lit un jeton existant dans PalDefender/RESTAPI/Tokens/ (lecture
-// seule côté plugin, seule l'écriture du .env du dashboard a lieu).
-app.post('/api/paldefender/detect', requireAuth, requireAdmin, (req, res) => {
-  const r = plugins.detectPalDefenderToken();
-  if (r.error) return res.status(404).json(r);
-  updateEnvFile({
-    PALDEFENDER_API_TOKEN: r.token,
-    PALDEFENDER_API_URL: process.env.PALDEFENDER_API_URL || 'http://127.0.0.1:17993'
-  });
-  activityLog.log(req.session.user.username, 'paldefender-token-set');
-  res.json({ ok: true, enabled: r.enabled, file: r.file });
-});
-
 app.post('/api/paldefender/command', requireAuth, requireAdmin, async (req, res) => {
   const { command, target, fields } = req.body || {};
   const cmd = paldefenderApi.COMMANDS[command];
