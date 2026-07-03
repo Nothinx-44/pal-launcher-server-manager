@@ -1,6 +1,6 @@
 {
   "name": "palworld-dashboard",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Dashboard web pour gérer un serveur Palworld dédié (start/stop/restart, sauvegardes, joueurs) + lanceur desktop d'installation",
   "author": "Vincent",
   "main": "electron/main.js",
