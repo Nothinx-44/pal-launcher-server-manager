@@ -27,6 +27,7 @@ const diskSpace = require('./lib/diskSpace');
 const backupRestore = require('./lib/backupRestore');
 const networkInfo = require('./lib/networkInfo');
 const plugins = require('./lib/plugins');
+const { updateEnvFile } = require('./lib/envFile');
 const paldefenderApi = require('./lib/paldefenderApi');
 const logTail = require('./lib/logTail');
 
@@ -853,18 +854,23 @@ app.post('/api/plugins/:name/uninstall', requireAuth, requireManager, async (req
 });
 
 // ---------- Commandes admin PalDefender (admin uniquement — pas les comptes "user") ----------
-app.get('/api/paldefender/status', requireAuth, requireAdmin, (req, res) => {
-  res.json(plugins.getPalDefenderApiStatus());
+// Pas d'auto-configuration côté dashboard (pas de génération de jeton ni d'écriture dans les
+// fichiers de PalDefender) : l'admin suit la doc officielle de PalDefender pour activer
+// RESTConfig.json et créer un jeton lui-même, puis le colle ici. Le dashboard se contente
+// d'appeler l'API avec ce jeton — un simple appel HTTP, rien de plus.
+app.get('/api/paldefender/config', requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    configured: !!process.env.PALDEFENDER_API_TOKEN,
+    url: process.env.PALDEFENDER_API_URL || 'http://127.0.0.1:17993'
+  });
 });
 
-app.post('/api/paldefender/configure', requireAuth, requireAdmin, (req, res) => {
-  try {
-    const result = plugins.configurePalDefenderApi();
-    activityLog.log(req.session.user.username, 'paldefender-api-configure');
-    res.json({ ok: true, ...result });
-  } catch (err) {
-    res.status(400).json({ error: String(err.message || err) });
-  }
+app.post('/api/paldefender/config', requireAuth, requireAdmin, (req, res) => {
+  const { token, url } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'token_required' });
+  updateEnvFile({ PALDEFENDER_API_TOKEN: token, PALDEFENDER_API_URL: (url || 'http://127.0.0.1:17993').trim() });
+  activityLog.log(req.session.user.username, 'paldefender-token-set');
+  res.json({ ok: true });
 });
 
 app.post('/api/paldefender/command', requireAuth, requireAdmin, async (req, res) => {

@@ -343,8 +343,12 @@
           <div class="field-block" data-admin-only>
             <span class="field-label">API de commandes (pour l'onglet Tableau de bord)</span>
             <p class="empty" id="paldefenderApiStatus" style="margin:0 0 8px;">—</p>
-            <button class="action" id="paldefenderConfigureBtn" type="button">Configurer l'API</button>
-            <p class="muted-hint" style="display:block; margin-top:8px;">Nécessite d'avoir démarré le serveur au moins une fois avec PalDefender installé. Un redémarrage du serveur est requis après configuration.</p>
+            <form id="paldefenderConfigForm" class="btn-row" style="flex-wrap:wrap;">
+              <input type="text" id="paldefenderTokenInput" placeholder="Jeton (Tokens/*.json dans PalDefender/RESTAPI)" style="flex:1; min-width:260px;">
+              <input type="text" id="paldefenderUrlInput" placeholder="http://127.0.0.1:17993">
+              <button class="action primary" type="submit">Enregistrer</button>
+            </form>
+            <p class="muted-hint" style="display:block; margin-top:8px;">Copie le jeton depuis un fichier dans <code>Pal/Binaries/Win64/PalDefender/RESTAPI/Tokens/</code> (créé après avoir démarré le serveur une fois avec PalDefender installé et son API REST activée dans <code>RESTConfig.json</code>).</p>
           </div>
         </div>
       </div>

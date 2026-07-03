@@ -314,25 +314,32 @@ let pdApiConfigured = false;
 
 async function refreshPaldefenderApiStatus() {
   if (!isAdmin()) return;
-  const data = await api('GET', '/api/paldefender/status');
+  const data = await api('GET', '/api/paldefender/config');
   if (!data) return;
-  pdApiConfigured = data.tokenConfigured;
-  const statusEl = document.getElementById('paldefenderApiStatus');
-  statusEl.textContent = data.tokenConfigured
-    ? '✅ Configurée'
-    : data.configFileExists
-      ? '⭕ Pas encore configurée'
-      : '⭕ Démarre le serveur au moins une fois avec PalDefender installé pour pouvoir la configurer';
+  pdApiConfigured = data.configured;
+  document.getElementById('paldefenderApiStatus').textContent = data.configured
+    ? '✅ Jeton enregistré'
+    : '⭕ Aucun jeton enregistré';
+  const urlInput = document.getElementById('paldefenderUrlInput');
+  if (urlInput && !urlInput.value) urlInput.value = data.url || '';
   const unavailable = document.getElementById('pdCommandsUnavailable');
   const form = document.getElementById('pdCommandForm');
   if (unavailable) unavailable.style.display = pdApiConfigured ? 'none' : 'block';
   if (form) form.style.display = pdApiConfigured ? 'flex' : 'none';
 }
 
-document.getElementById('paldefenderConfigureBtn').addEventListener('click', async () => {
-  const r = await api('POST', '/api/paldefender/configure', {});
-  if (r && r.ok) showToast('API configurée — redémarre le serveur pour l\'activer');
-  else showToast((r && r.error) || 'Échec de la configuration');
+document.getElementById('paldefenderConfigForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const token = document.getElementById('paldefenderTokenInput').value.trim();
+  if (!token) { showToast('Colle un jeton d\'abord'); return; }
+  const url = document.getElementById('paldefenderUrlInput').value.trim();
+  const r = await api('POST', '/api/paldefender/config', { token, url });
+  if (r && r.ok) {
+    showToast('Jeton enregistré');
+    document.getElementById('paldefenderTokenInput').value = '';
+  } else {
+    showToast((r && r.error) || 'Échec de l\'enregistrement');
+  }
   refreshPaldefenderApiStatus();
 });
 
@@ -410,7 +417,7 @@ async function refreshActivity() {
     'backup-restore-error': 'a échoué à restaurer une sauvegarde',
     'plugin-install': 'a installé un plugin',
     'plugin-uninstall': 'a désinstallé un plugin',
-    'paldefender-api-configure': 'a configuré l\'API PalDefender',
+    'paldefender-token-set': 'a enregistré le jeton API PalDefender',
     'paldefender-command': 'a exécuté une commande PalDefender',
     'disk-space-low': 'alerte espace disque faible',
     'auto-restart': 'redémarrage automatique (watchdog)',
