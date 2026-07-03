@@ -91,6 +91,16 @@ header.top h1 {
   font-size: 1.4rem;
   margin: 0;
   letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-logo {
+  height: 1.6em;
+  width: 1.6em;
+  border-radius: 8px;
+  vertical-align: middle;
+  object-fit: cover;
 }
 .role-badge {
   font-family: var(--font-body);

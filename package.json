@@ -1,7 +1,7 @@
 {
-  "name": "palworld-dashboard",
+  "name": "pal-launcher-server-manager",
   "version": "1.0.4",
-  "description": "Dashboard web pour gérer un serveur Palworld dédié (start/stop/restart, sauvegardes, joueurs) + lanceur desktop d'installation",
+  "description": "Pal Launcher Server Manager — pilote un serveur Palworld dédié (start/stop/restart, sauvegardes, joueurs) depuis une appli desktop, aucun prérequis",
   "author": "Vincent",
   "main": "electron/main.js",
   "scripts": {
@@ -29,8 +29,8 @@
     "electron-builder": "^24.13.3"
   },
   "build": {
-    "appId": "com.palworld.dashboard.launcher",
-    "productName": "PalworldDashboardLauncher",
+    "appId": "com.pallauncher.servermanager",
+    "productName": "Pal Launcher Server Manager",
     "asar": false,
     "files": [
       "electron/**/*",
@@ -52,8 +52,8 @@
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
-      "artifactName": "PalworldDashboardLauncher-Setup.exe",
-      "shortcutName": "Palworld Dashboard",
+      "artifactName": "PalLauncherServerManager-Setup.exe",
+      "shortcutName": "Pal Launcher Server Manager",
       "perMachine": true,
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,

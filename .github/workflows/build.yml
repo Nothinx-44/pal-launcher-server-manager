@@ -1,6 +1,6 @@
 name: Build installer
 
-# Construit PalworldDashboardLauncher-Setup.exe et l'attache à la release GitHub.
+# Construit PalLauncherServerManager-Setup.exe et l'attache à la release GitHub.
 # Se déclenche quand tu publies une release (ou manuellement depuis l'onglet Actions).
 on:
   release:
@@ -35,11 +35,11 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: PalworldDashboardLauncher-Setup
-          path: dist/PalworldDashboardLauncher-Setup.exe
+          name: PalLauncherServerManager-Setup
+          path: dist/PalLauncherServerManager-Setup.exe
 
       - name: Attach to release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/PalworldDashboardLauncher-Setup.exe
+          files: dist/PalLauncherServerManager-Setup.exe

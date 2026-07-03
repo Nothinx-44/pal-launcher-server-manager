@@ -1,4 +1,4 @@
-# Palworld Dashboard
+# Pal Launcher Server Manager
 
 Petit dashboard web pour piloter ton serveur Palworld dédié (Windows) : start/stop/restart,
 sauvegardes manuelles + planifiées, joueurs connectés, annonces, kick. Accessible à tes amis
@@ -8,7 +8,7 @@ nom de domaine ni de certificat nécessaire.
 ## 0. Le plus simple : l'application de lancement (installeur)
 
 Pour ne rien avoir à installer ni à taper en ligne de commande, utilise l'application desktop
-**`PalworldDashboardLauncher-Setup.exe`** (disponible dans les *Releases* GitHub). C'est un
+**`PalLauncherServerManager-Setup.exe`** (disponible dans les *Releases* GitHub). C'est un
 installeur classique (pas un exécutable portable) : les fichiers sont extraits **une seule fois**
 à l'installation, donc les lancements suivants sont quasi instantanés.
 
@@ -16,7 +16,7 @@ installeur classique (pas un exécutable portable) : les fichiers sont extraits 
    créer les services Windows et la règle de pare-feu).
 2. Suis l'assistant d'installation (dossier d'installation modifiable, raccourcis Bureau/menu
    Démarrer créés).
-3. Une fois installé, lance **« Palworld Dashboard »** depuis le menu Démarrer (plus besoin de
+3. Une fois installé, lance **« Pal Launcher Server Manager »** depuis le menu Démarrer (plus besoin de
    relancer le Setup) :
    - **Étape 1** : une checklist montre l'état actuel (droits admin, SteamCMD, serveur, services…).
    - **Étape 2 – Installer le serveur** : remplis les réglages essentiels (dossiers, mots de passe,
@@ -150,7 +150,7 @@ mais garde en tête que les mots de passe circulent en clair sur le trajet.
 ### Autoriser le port dans le pare-feu Windows
 
 ```powershell
-New-NetFirewallRule -DisplayName "Palworld Dashboard" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
+New-NetFirewallRule -DisplayName "Pal Launcher Server Manager" -Direction Inbound -Protocol TCP -LocalPort 3000 -Action Allow
 ```
 
 ### Accès pour tes amis

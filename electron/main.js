@@ -53,7 +53,7 @@ function createWindow() {
     minHeight: 520,
     useContentSize: true,
     backgroundColor: '#14181f',
-    title: 'Palworld Dashboard — Installation & Lancement',
+    title: 'Pal Launcher Server Manager — Installation & Lancement',
     webPreferences: { preload: path.join(__dirname, 'preload.js') }
   });
   mainWindow.setMenuBarVisibility(false);
