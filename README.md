@@ -88,6 +88,4 @@ affiche une **carte en direct des joueurs**, envoie des notifications Discord, e
 ---
 
 *Pal Launcher Server Manager is an independent tool, not affiliated with Pocketpair, Inc.
-“Palworld” is a trademark of its respective owner. World map image from
-[palserver-online-map](https://github.com/Dalufishe/palserver-online-map) by Dalufishe, used with
-the author's permission.*
+“Palworld” is a trademark of its respective owner.*
