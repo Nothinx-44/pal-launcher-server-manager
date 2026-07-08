@@ -169,14 +169,16 @@ async function refreshBans() {
   empty.style.display = 'none';
   data.bans.forEach(b => {
     const li = document.createElement('li');
-    const date = new Date(b.ts).toLocaleString('fr-FR');
-    li.innerHTML = `<span>${escapeHtml(b.name)} <span class="muted">— banni le ${date}</span></span>`;
+    // Les entrées PalDefender n'ont pas d'horodatage ; on affiche le type (IP vs joueur) à la place.
+    const meta = b.type === 'ip' ? 'IP bannie'
+      : (b.ts ? `banni le ${new Date(b.ts).toLocaleString('fr-FR')}` : 'joueur banni');
+    li.innerHTML = `<span>${escapeHtml(b.name)} <span class="muted">— ${meta}</span></span>`;
     const btn = document.createElement('button');
     btn.className = 'icon-btn';
     btn.textContent = 'Débannir';
     btn.addEventListener('click', async () => {
-      const r = await api('POST', '/api/unban', { userid: b.userId });
-      if (r && r.ok) { showToast('Joueur débanni'); refreshBans(); refreshActivity(); }
+      const r = await api('POST', '/api/unban', { userid: b.userId, type: b.type });
+      if (r && r.ok) { showToast(b.type === 'ip' ? 'IP débannie' : 'Joueur débanni'); refreshBans(); refreshActivity(); }
       else showToast('Échec du déban');
     });
     li.appendChild(btn);
@@ -330,51 +332,24 @@ let pdApiConfigured = false;
 
 async function refreshPaldefenderApiStatus() {
   if (!isAdmin()) return;
-  const data = await api('GET', '/api/paldefender/config');
+  let data = await api('GET', '/api/paldefender/config');
   if (!data) return;
+  // Auto-import silencieux : si aucun jeton n'est encore enregistré mais qu'un jeton existe déjà
+  // dans PalDefender/RESTAPI/Tokens/ (plugin installé, serveur démarré au moins une fois), on
+  // l'importe automatiquement — aucune action manuelle demandée à l'utilisateur.
+  if (!data.configured) {
+    const imported = await api('POST', '/api/paldefender/detect', {});
+    if (imported && imported.ok) data = await api('GET', '/api/paldefender/config') || data;
+  }
   pdApiConfigured = data.configured;
   document.getElementById('paldefenderApiStatus').textContent = data.configured
-    ? '✅ Jeton enregistré'
-    : '⭕ Aucun jeton enregistré';
-  const urlInput = document.getElementById('paldefenderUrlInput');
-  if (urlInput && !urlInput.value) urlInput.value = data.url || '';
+    ? '✅ Prêt — les Commandes Admin fonctionnent'
+    : '⭕ Installe PalDefender puis démarre le serveur une fois';
   const unavailable = document.getElementById('pdCommandsUnavailable');
   const form = document.getElementById('pdCommandForm');
   if (unavailable) unavailable.style.display = pdApiConfigured ? 'none' : 'block';
   if (form) form.style.display = pdApiConfigured ? 'flex' : 'none';
 }
-
-document.getElementById('paldefenderDetectBtn').addEventListener('click', async () => {
-  const r = await api('POST', '/api/paldefender/detect', {});
-  if (r && r.ok) {
-    showToast(r.enabled
-      ? `Jeton importé (${r.file})`
-      : `Jeton importé (${r.file}) — pense à mettre Enabled: true dans RESTConfig.json puis à redémarrer le serveur`);
-  } else {
-    const msgs = {
-      server_not_installed: 'Serveur non installé',
-      no_rest_config: 'RESTConfig.json introuvable — démarre le serveur une fois avec PalDefender installé',
-      no_token_file: 'Aucun jeton trouvé dans Tokens/ — crée-en un (voir doc PalDefender) ou colle-le manuellement'
-    };
-    showToast(msgs[r && r.error] || 'Échec de l\'import');
-  }
-  refreshPaldefenderApiStatus();
-});
-
-document.getElementById('paldefenderConfigForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  const token = document.getElementById('paldefenderTokenInput').value.trim();
-  if (!token) { showToast('Colle un jeton d\'abord'); return; }
-  const url = document.getElementById('paldefenderUrlInput').value.trim();
-  const r = await api('POST', '/api/paldefender/config', { token, url });
-  if (r && r.ok) {
-    showToast('Jeton enregistré');
-    document.getElementById('paldefenderTokenInput').value = '';
-  } else {
-    showToast((r && r.error) || 'Échec de l\'enregistrement');
-  }
-  refreshPaldefenderApiStatus();
-});
 
 // Affiche/masque les champs pertinents selon la commande sélectionnée.
 function updatePdFieldsVisibility() {

@@ -550,8 +550,23 @@ app.post('/api/kick', requireAuth, requireManager, async (req, res) => {
 });
 
 // ---------- Ban / unban (admin uniquement) ----------
-app.get('/api/bans', requireAuth, requireManager, (req, res) => {
-  res.json({ bans: bans.list() });
+app.get('/api/bans', requireAuth, requireManager, async (req, res) => {
+  const local = bans.list();
+  const nameById = Object.fromEntries(local.map(b => [b.userId, b.name]));
+  // Source autoritative quand PalDefender est configuré : sa banlist inclut les entrées IP
+  // (invisibles autrement) et reflète l'état réel des bans, y compris ceux faits en jeu.
+  const pd = await paldefenderApi.getBanlist();
+  if (!pd) {
+    return res.json({ bans: local.map(b => ({ ...b, type: 'user' })) });
+  }
+  const seen = new Set();
+  const merged = pd.map(e => {
+    seen.add(e.id);
+    return { userId: e.id, name: e.type === 'ip' ? e.id : (nameById[e.id] || e.id), type: e.type };
+  });
+  // Bans enregistrés localement mais absents de PalDefender (faits via l'API officielle seule)
+  local.forEach(b => { if (!seen.has(b.userId)) merged.push({ ...b, type: 'user' }); });
+  res.json({ bans: merged });
 });
 
 app.post('/api/ban', requireAuth, requireManager, async (req, res) => {
@@ -569,25 +584,26 @@ app.post('/api/ban', requireAuth, requireManager, async (req, res) => {
 });
 
 app.post('/api/unban', requireAuth, requireManager, async (req, res) => {
-  const { userid } = req.body || {};
+  const { userid, type } = req.body || {};
   if (!userid) return res.status(400).json({ error: 'userid_required' });
+  const pdConfigured = !!process.env.PALDEFENDER_API_TOKEN;
   try {
-    // Débannit des deux côtés : API officielle Palworld (banlist.txt) ET, si PalDefender est
-    // configuré, sa propre banlist — un joueur banni via les Commandes Admin ne se débannit que
-    // par PalDefender. On ignore l'échec individuel de chaque canal (le joueur peut n'être banni
-    // que d'un seul côté), et on n'échoue que si les deux échouent.
-    const results = await Promise.allSettled([
-      getPalworldApi().post('/v1/api/unban', { userid }),
-      process.env.PALDEFENDER_API_TOKEN
-        ? paldefenderApi.COMMANDS.unban.run(userid, {})
-        : Promise.reject(new Error('paldefender_not_configured'))
-    ]);
-    const officialOk = results[0].status === 'fulfilled';
-    const pdOk = results[1].status === 'fulfilled';
-    if (!officialOk && !pdOk) throw new Error('unban_failed');
+    if (type === 'ip') {
+      // Entrée IP : seul PalDefender la gère (l'API officielle Palworld ne bannit pas par IP).
+      if (!pdConfigured) throw new Error('unban_failed');
+      await paldefenderApi.COMMANDS.unbanip.run(userid, {});
+    } else {
+      // Débannit des deux côtés : API officielle Palworld (banlist.txt) ET PalDefender si
+      // configuré. On n'échoue que si les deux canaux échouent.
+      const results = await Promise.allSettled([
+        getPalworldApi().post('/v1/api/unban', { userid }),
+        pdConfigured ? paldefenderApi.COMMANDS.unban.run(userid, {}) : Promise.reject(new Error('paldefender_not_configured'))
+      ]);
+      if (results[0].status !== 'fulfilled' && results[1].status !== 'fulfilled') throw new Error('unban_failed');
+    }
     await bans.remove(userid);
     activityLog.log(req.session.user.username, 'unban', userid);
-    discord.notify(`♻️ Joueur débanni par **${req.session.user.username}**`);
+    discord.notify(`♻️ ${type === 'ip' ? 'IP débannie' : 'Joueur débanni'} par **${req.session.user.username}**`);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: String(err) });

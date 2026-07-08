@@ -344,15 +344,9 @@
           <p class="muted-hint" style="display:block; margin-top:10px;">⚠️ Binaire fermé (code non public) fourni par ses auteurs — installé directement depuis leur release GitHub officielle, jamais modifié par ce dashboard. Installe la dernière version <strong>préversion (bêta 1.8.0)</strong> : c'est la première à exposer l'API des Commandes Admin.</p>
 
           <div class="field-block" data-admin-only>
-            <span class="field-label">API de commandes (pour l'onglet Tableau de bord)</span>
-            <p class="empty" id="paldefenderApiStatus" style="margin:0 0 8px;">—</p>
-            <button class="action primary" id="paldefenderDetectBtn" type="button">Importer automatiquement</button>
-            <form id="paldefenderConfigForm" class="btn-row" style="flex-wrap:wrap; margin-top:8px;">
-              <input type="text" id="paldefenderTokenInput" placeholder="…ou colle un jeton manuellement" style="flex:1; min-width:260px;">
-              <input type="text" id="paldefenderUrlInput" placeholder="http://127.0.0.1:17993">
-              <button class="action" type="submit">Enregistrer</button>
-            </form>
-            <p class="muted-hint" style="display:block; margin-top:8px;">Tout est automatique à l'installation du plugin (API activée + jeton créé). Utilise le bouton ci-dessus seulement si PalDefender a été installé autrement qu'avec ce dashboard, ou pour récupérer un jeton créé manuellement.</p>
+            <span class="field-label">Commandes Admin (onglet Tableau de bord)</span>
+            <p class="empty" id="paldefenderApiStatus" style="margin:0;">—</p>
+            <p class="muted-hint" style="display:block; margin-top:8px;">Entièrement automatique : l'installation active l'API et configure l'accès. Il suffit ensuite de démarrer le serveur.</p>
           </div>
         </div>
       </div>
