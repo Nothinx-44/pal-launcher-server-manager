@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/logo.png" alt="Pal Launcher Server Manager" width="100" height="100">
+  <img src="docs/img/logo.png" alt="Pal Launcher Server Manager" width="100" height="100">
 </div>
 
 # Pal Launcher Server Manager
@@ -23,7 +23,7 @@
 
 ### Why Pal Launcher Server Manager?
 
-| Feature | This | Nitrado | G-Portal | Self-Hosted (manual) |
+| Feature | Pal Launcher | Nitrado | G-Portal | Self-Hosted (manual) |
 |---------|------|---------|----------|----------------------|
 | **Free** | ✅ | ❌ ($10-40/mo) | ❌ ($15-30/mo) | ✅ |
 | **Web dashboard** | ✅ | ✅ | ✅ | ❌ (files only) |
