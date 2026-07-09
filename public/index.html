@@ -237,76 +237,83 @@
 
     <!-- ============ RÉGLAGES (admin) ============ -->
     <section class="tab-content" id="tab-settings">
-      <div class="grid">
-        <div class="panel">
-          <h2>Mise à jour du serveur</h2>
-          <div class="btn-row">
-            <button class="action" id="checkUpdateBtn">Vérifier les mises à jour</button>
-            <button class="action primary" id="applyUpdateBtn" style="display:none;">Appliquer la mise à jour</button>
+      <div class="settings-cols">
+        <div class="settings-col">
+          <div class="panel">
+            <h2>Mise à jour du serveur</h2>
+            <div class="btn-row">
+              <button class="action" id="checkUpdateBtn">Vérifier les mises à jour</button>
+              <button class="action primary" id="applyUpdateBtn" style="display:none;">Appliquer la mise à jour</button>
+            </div>
+            <p class="empty" id="updateStatus" style="margin-top:10px;">Compare le build installé au dernier build Steam (via SteamCMD).</p>
           </div>
-          <p class="empty" id="updateStatus" style="margin-top:10px;">Compare le build installé au dernier build Steam (via SteamCMD).</p>
-        </div>
 
-        <div class="panel" data-admin-only>
-          <h2>Installation du serveur</h2>
-          <ul class="checklist" id="setupChecklist"></ul>
-          <p class="warning" id="setupElevatedWarning" style="display:none;">
-            ⚠️ Le dashboard ne semble pas tourner avec des droits administrateur : l'installation
-            (service Windows, pare-feu) risque d'échouer.
-          </p>
-          <button class="action" id="setupToggleBtn" type="button">Configurer / réinstaller</button>
-        </div>
-      </div>
+          <div class="panel">
+            <h2>Redémarrage automatique</h2>
+            <label class="switch-row">
+              <input type="checkbox" id="rsEnabled"> Activer le redémarrage récurrent
+            </label>
 
-      <div class="panel" style="margin-bottom:22px;">
-        <h2>Redémarrage automatique</h2>
-        <label class="switch-row">
-          <input type="checkbox" id="rsEnabled"> Activer le redémarrage récurrent
-        </label>
+            <div class="field-block">
+              <span class="field-label">Jours</span>
+              <div class="days-row" id="rsDays"></div>
+            </div>
 
-        <div class="field-block">
-          <span class="field-label">Jours</span>
-          <div class="days-row" id="rsDays"></div>
-        </div>
+            <div class="field-block">
+              <span class="field-label">Heures (plusieurs possibles)</span>
+              <div id="rsTimes" class="times-list"></div>
+              <div class="time-add">
+                <input type="time" id="rsNewTime" value="05:00">
+                <button class="action" id="rsAddTime" type="button">Ajouter</button>
+              </div>
+            </div>
 
-        <div class="field-block">
-          <span class="field-label">Heures (plusieurs possibles)</span>
-          <div id="rsTimes" class="times-list"></div>
-          <div class="time-add">
-            <input type="time" id="rsNewTime" value="05:00">
-            <button class="action" id="rsAddTime" type="button">Ajouter</button>
+            <div class="field-block">
+              <span class="field-label">Avertissement aux joueurs</span>
+              <input type="number" id="rsWarningMinutes" min="1" max="60" value="5" style="width:70px;">
+              <span class="muted-hint">minutes avant le redémarrage effectif (annonces décroissantes)</span>
+            </div>
+
+            <div class="btn-row" data-manager-only style="margin-top:12px;">
+              <button class="action primary" id="rsSaveBtn" type="button">Enregistrer le planning</button>
+            </div>
+            <p class="empty" id="rsSummary" style="margin-top:10px;"></p>
           </div>
         </div>
 
-        <div class="field-block">
-          <span class="field-label">Avertissement aux joueurs</span>
-          <input type="number" id="rsWarningMinutes" min="1" max="60" value="5" style="width:70px;">
-          <span class="muted-hint">minutes avant le redémarrage effectif (annonces décroissantes)</span>
-        </div>
+        <div class="settings-col">
+          <div class="panel" data-admin-only>
+            <h2>Installation du serveur</h2>
+            <ul class="checklist" id="setupChecklist"></ul>
+            <p class="warning" id="setupElevatedWarning" style="display:none;">
+              ⚠️ Le dashboard ne semble pas tourner avec des droits administrateur : l'installation
+              (service Windows, pare-feu) risque d'échouer.
+            </p>
+          </div>
 
-        <div class="btn-row" data-manager-only style="margin-top:12px;">
-          <button class="action primary" id="rsSaveBtn" type="button">Enregistrer le planning</button>
+          <div class="panel" data-admin-only>
+            <h2>Notifications Discord</h2>
+            <p class="muted-hint" style="display:block; margin-bottom:10px;">
+              Reçois une alerte dans un salon Discord à chaque événement (démarrage/arrêt, joueur qui
+              rejoint/quitte, sauvegarde, mise à jour, espace disque faible…).
+              <a href="https://support.discord.com/hc/fr/articles/228383668" target="_blank" rel="noopener">Comment créer un webhook Discord ?</a>
+              (Paramètres du salon → Intégrations → Webhooks → Nouveau webhook → Copier l'URL du webhook)
+            </p>
+            <div class="account-form" style="margin-bottom:10px;">
+              <input type="text" id="discordWebhookUrl" placeholder="https://discord.com/api/webhooks/…" style="flex:1; min-width:280px;">
+            </div>
+            <div class="field-block">
+              <span class="field-label">Notifications à recevoir</span>
+              <div id="discordCategories"></div>
+            </div>
+            <div class="btn-row">
+              <button class="action primary" id="discordSaveBtn" type="button">Enregistrer</button>
+              <button class="action" id="discordTestBtn" type="button">Envoyer un message de test</button>
+              <button class="action danger" id="discordRemoveBtn" type="button" style="display:none;">Désactiver</button>
+            </div>
+            <p class="empty" id="discordStatus" style="margin-top:10px;">—</p>
+          </div>
         </div>
-        <p class="empty" id="rsSummary" style="margin-top:10px;"></p>
-      </div>
-
-      <div class="panel" data-admin-only id="setupFormPanel" style="margin-bottom:22px; display:none;">
-        <form class="account-form" id="setupForm">
-          <input type="text" id="setupInstallDir" placeholder="Dossier d'installation (ex: D:\PalworldServer)">
-          <input type="text" id="setupSteamCmdDir" placeholder="Dossier SteamCMD">
-          <input type="text" id="setupNssmPath" placeholder="Chemin nssm.exe">
-          <input type="text" id="setupServiceName" placeholder="Nom du service Windows">
-          <input type="text" id="setupServerName" placeholder="Nom du serveur">
-          <input type="password" id="setupServerPassword" placeholder="Mot de passe serveur (optionnel)" autocomplete="new-password">
-          <input type="password" id="setupAdminPassword" placeholder="Mot de passe admin (6 caractères min., requis pour l'API REST)" autocomplete="new-password" required minlength="6">
-          <input type="number" id="setupMaxPlayers" placeholder="Joueurs max" min="1">
-          <input type="number" id="setupPort" placeholder="Port de jeu (UDP)">
-          <input type="number" id="setupRestApiPort" placeholder="Port API REST">
-          <input type="text" id="setupBackupDir" placeholder="Dossier de sauvegardes">
-          <button class="action primary" type="submit" id="setupSubmitBtn">Lancer l'installation</button>
-        </form>
-        <p class="error" id="setupError"></p>
-        <pre class="setup-log" id="setupLog" style="display:none;"></pre>
       </div>
 
       <div class="panel">

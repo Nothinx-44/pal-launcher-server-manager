@@ -162,7 +162,7 @@ MIT — use freely, modify, redistribute. See [LICENSE](LICENSE).
 
 ### Pourquoi Pal Launcher Server Manager ?
 
-| Fonctionnalité | Celui-ci | Nitrado | G-Portal | Manuel (sans outils) |
+| Fonctionnalité | Pal Launcher | Nitrado | G-Portal | Manuel (sans outils) |
 |---|---|---|---|---|
 | **Gratuit** | ✅ | ❌ (10-40€/mois) | ❌ (15-30€/mois) | ✅ |
 | **Dashboard web** | ✅ | ✅ | ✅ | ❌ (fichiers only) |
@@ -255,13 +255,13 @@ Puis ouvre `http://localhost:3000` et connecte-toi.
 
 ### ❓ FAQ
 
-**Q : Palworld te bannit pour ça ?**  
+**Q : Palworld bannit-il pour l'utilisation de Pal Launcher ?**  
 A : Non. C'est un outil admin, comme éditer des fichiers. L'API officielle de Palworld est volontairement publique.
 
 **Q : Si mon PC crash ?**  
 A : Le serveur est un service Windows. Il redémarre tout seul au reboot.
 
-**Q : Ça marche sur Linux/Mac ?**  
+**Q : Pal Launcher fonctionne-t-il sur Linux/Mac ?**  
 A : Pas encore. L'app desktop demande Windows. Le dashboard web est agnostique si tu l'installes manuellement.
 
 **Q : C'est payant ?**  

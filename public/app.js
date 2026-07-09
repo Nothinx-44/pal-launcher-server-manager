@@ -986,14 +986,9 @@ document.getElementById('passwordForm').addEventListener('submit', async (e) => 
   }
 });
 
-// ---------- Installation du serveur Palworld ----------
+// ---------- Installation du serveur Palworld (visualisation uniquement) ----------
 const setupChecklist = document.getElementById('setupChecklist');
 const setupElevatedWarning = document.getElementById('setupElevatedWarning');
-const setupForm = document.getElementById('setupForm');
-const setupToggleBtn = document.getElementById('setupToggleBtn');
-const setupSubmitBtn = document.getElementById('setupSubmitBtn');
-const setupError = document.getElementById('setupError');
-const setupLogEl = document.getElementById('setupLog');
 
 function renderSetupChecklist(status) {
   const items = [
@@ -1011,88 +1006,73 @@ function renderSetupChecklist(status) {
   setupElevatedWarning.style.display = status.elevated ? 'none' : 'block';
 }
 
-function fillSetupForm(current) {
-  document.getElementById('setupInstallDir').value = current.installDir || '';
-  document.getElementById('setupSteamCmdDir').value = current.steamCmdDir || '';
-  document.getElementById('setupNssmPath').value = current.nssmPath || '';
-  document.getElementById('setupServiceName').value = current.serviceName || '';
-  document.getElementById('setupMaxPlayers').value = current.maxPlayers || 8;
-  document.getElementById('setupPort').value = current.port || 8211;
-  document.getElementById('setupRestApiPort').value = current.restApiPort || 8212;
-  document.getElementById('setupBackupDir').value = current.backupDir || '';
-}
-
 async function refreshSetupStatus() {
   if (currentRole !== 'admin') return;
   const data = await api('GET', '/api/setup/status');
   if (!data || data.error) return;
   renderSetupChecklist(data);
-  fillSetupForm(data.current || {});
-  if (data.installing) {
-    document.getElementById('setupFormPanel').style.display = 'block';
-    setupSubmitBtn.disabled = true;
-    setupLogEl.style.display = 'block';
-    listenSetupStream();
-  }
 }
 
-let setupEventSource = null;
-function listenSetupStream() {
-  if (setupEventSource) return;
-  setupEventSource = new EventSource('/api/setup/stream');
-  setupEventSource.onmessage = (e) => {
-    const entry = JSON.parse(e.data);
-    setupLogEl.textContent += entry.line + '\n';
-    setupLogEl.scrollTop = setupLogEl.scrollHeight;
-  };
-  setupEventSource.addEventListener('done', (e) => {
-    const payload = e.data ? JSON.parse(e.data) : {};
-    showToast(payload.ok === false ? `Échec de l'installation : ${payload.error || ''}` : 'Installation terminée');
-    setupSubmitBtn.disabled = false;
-    setupEventSource.close();
-    setupEventSource = null;
-    refreshSetupStatus();
+// ---------- Notifications Discord ----------
+const discordWebhookUrl = document.getElementById('discordWebhookUrl');
+const discordStatus = document.getElementById('discordStatus');
+const discordRemoveBtn = document.getElementById('discordRemoveBtn');
+const discordCategories = document.getElementById('discordCategories');
+
+function renderDiscordCategories(labels, values) {
+  discordCategories.innerHTML = '';
+  Object.entries(labels).forEach(([key, label]) => {
+    const row = document.createElement('label');
+    row.className = 'switch-row';
+    row.innerHTML = `<input type="checkbox" data-category="${key}" ${values[key] !== false ? 'checked' : ''}> ${label}`;
+    discordCategories.appendChild(row);
   });
-  setupEventSource.onerror = () => {
-    setupEventSource.close();
-    setupEventSource = null;
-  };
 }
 
-setupToggleBtn.addEventListener('click', () => {
-  const panel = document.getElementById('setupFormPanel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+function readDiscordCategories() {
+  const categories = {};
+  discordCategories.querySelectorAll('input[data-category]').forEach(input => {
+    categories[input.dataset.category] = input.checked;
+  });
+  return categories;
+}
+
+async function refreshDiscordConfig() {
+  if (currentRole !== 'admin') return;
+  const data = await api('GET', '/api/discord/config');
+  if (!data || data.error) return;
+  discordWebhookUrl.value = data.url || '';
+  discordStatus.textContent = data.configured
+    ? '✅ Notifications Discord activées.'
+    : 'Aucun webhook configuré — colle l\'URL ci-dessus puis clique sur Enregistrer.';
+  discordRemoveBtn.style.display = data.configured ? '' : 'none';
+  renderDiscordCategories(data.categoryLabels || {}, data.categories || {});
+}
+
+document.getElementById('discordSaveBtn').addEventListener('click', async () => {
+  const url = discordWebhookUrl.value.trim();
+  if (!url) { showToast('Colle d\'abord l\'URL du webhook Discord.'); return; }
+  const r = await api('POST', '/api/discord/config', { url, categories: readDiscordCategories() });
+  if (r && r.ok) {
+    showToast('Webhook Discord enregistré.');
+    refreshDiscordConfig();
+  } else {
+    showToast('URL de webhook invalide.');
+  }
 });
 
-setupForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  setupError.textContent = '';
-  const body = {
-    installDir: document.getElementById('setupInstallDir').value.trim(),
-    steamCmdDir: document.getElementById('setupSteamCmdDir').value.trim(),
-    nssmPath: document.getElementById('setupNssmPath').value.trim(),
-    serviceName: document.getElementById('setupServiceName').value.trim(),
-    serverName: document.getElementById('setupServerName').value.trim(),
-    serverPassword: document.getElementById('setupServerPassword').value,
-    adminPassword: document.getElementById('setupAdminPassword').value,
-    maxPlayers: document.getElementById('setupMaxPlayers').value,
-    port: document.getElementById('setupPort').value,
-    restApiPort: document.getElementById('setupRestApiPort').value,
-    backupDir: document.getElementById('setupBackupDir').value.trim()
-  };
-  const r = await api('POST', '/api/setup/install', body);
-  if (r && r.ok) {
-    setupSubmitBtn.disabled = true;
-    setupLogEl.style.display = 'block';
-    setupLogEl.textContent = '';
-    listenSetupStream();
-  } else {
-    setupError.textContent = r && r.error === 'admin_password_required'
-      ? 'Mot de passe admin requis (6 caractères min.).'
-      : r && r.error === 'install_in_progress'
-        ? 'Une installation est déjà en cours.'
-        : 'Échec du lancement de l\'installation.';
-  }
+document.getElementById('discordTestBtn').addEventListener('click', async () => {
+  const r = await api('POST', '/api/discord/test', {});
+  if (r && r.ok) showToast('Message de test envoyé, vérifie ton salon Discord !');
+  else if (r && r.error === 'send_failed') showToast('Échec de l\'envoi — vérifie que l\'URL du webhook est correcte.');
+  else showToast('Échec — enregistre d\'abord un webhook valide.');
+});
+
+discordRemoveBtn.addEventListener('click', async () => {
+  await api('POST', '/api/discord/remove', {});
+  discordWebhookUrl.value = '';
+  showToast('Notifications Discord désactivées.');
+  refreshDiscordConfig();
 });
 
 // ---------- Planificateur de sauvegardes automatiques ----------
@@ -1286,6 +1266,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   refreshBackupSchedule();
   refreshRestartSchedule();
   refreshSetupStatus();
+  refreshDiscordConfig();
   refreshDiskSpace();
   refreshNetworkInfo();
   refreshPaldefenderApiStatus();
