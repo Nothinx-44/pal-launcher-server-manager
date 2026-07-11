@@ -19,7 +19,8 @@ param(
     [string]$ServiceName = "PalworldServer",
     [string]$ServerName = "Serveur de Vincent",
     [int]$MaxPlayers = 8,
-    [int]$Port = 8211
+    [int]$Port = 8211,
+    [int]$QueryPort = 27015
 )
 
 $ErrorActionPreference = "Stop"
@@ -91,7 +92,7 @@ if (-not (Test-Path $NssmPath)) {
     if (-not $existing) {
         Write-Host "[5/6] Création du service Windows '$ServiceName'..." -ForegroundColor Yellow
         & $NssmPath install $ServiceName (Join-Path $ServerDir "PalServer.exe")
-        & $NssmPath set $ServiceName AppParameters "-ServerName=""$ServerName"" -port=$Port -players=$MaxPlayers -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS EpicApp=PalServer"
+        & $NssmPath set $ServiceName AppParameters "-ServerName=""$ServerName"" -port=$Port -queryport=$QueryPort -players=$MaxPlayers -useperfthreads -NoAsyncLoadingThread -UseMultithreadForDS EpicApp=PalServer"
         & $NssmPath set $ServiceName AppDirectory $ServerDir
         & $NssmPath set $ServiceName Start SERVICE_DEMAND_START
         & $NssmPath set $ServiceName AppExit Default Restart

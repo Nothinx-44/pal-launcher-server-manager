@@ -112,8 +112,14 @@ ipcMain.handle('setup:getStatus', async () => {
 ipcMain.handle('setup:install', async (_evt, body) => {
   try {
     const input = body || {};
-    if (!input.adminPassword || input.adminPassword.length < 6) {
+    // "Serveur déjà installé" : le mot de passe admin peut rester vide (celui déjà en place dans
+    // le .ini existant sera conservé, ou un nouveau généré automatiquement s'il n'y en a pas).
+    // Sinon (installation neuve), il reste obligatoire pour activer l'API REST du dashboard.
+    if (!input.existingServer && (!input.adminPassword || input.adminPassword.length < 6)) {
       throw new Error('Mot de passe admin requis (6 caractères minimum).');
+    }
+    if (input.adminPassword && input.adminPassword.length < 6) {
+      throw new Error('Mot de passe admin : 6 caractères minimum si renseigné.');
     }
     sendLog('=== Préparation ===');
     // ensureNssm télécharge NSSM et met NSSM_PATH à jour : à faire AVANT normalizeConfig, qui

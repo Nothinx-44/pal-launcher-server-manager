@@ -75,6 +75,7 @@ function fillForm(current = {}) {
   $('serverName').value = current.serverName || '';
   $('maxPlayers').value = current.maxPlayers || 8;
   $('port').value = current.port || 8211;
+  $('queryPort').value = current.queryPort || 27015;
   $('restApiPort').value = current.restApiPort || 8212;
   $('backupDir').value = current.backupDir || '';
 }
@@ -91,6 +92,22 @@ async function refresh() {
 }
 
 // ---------- Installation ----------
+// Case "serveur déjà installé" : le mot de passe admin devient optionnel (le mot de passe déjà
+// en place dans le .ini existant est conservé), et le libellé du dossier reflète qu'il faut
+// pointer directement sur PalServer.exe (pas de sous-dossier "Server" imposé).
+const existingServerCheckbox = $('existingServer');
+const adminPasswordInput = $('adminPassword');
+function applyExistingServerMode() {
+  const on = existingServerCheckbox.checked;
+  $('existingServerHint').style.display = on ? 'block' : 'none';
+  $('installDirLabel').textContent = on ? 'Dossier du serveur (contient PalServer.exe)' : "Dossier d'installation";
+  adminPasswordInput.required = !on;
+  adminPasswordInput.placeholder = on ? 'laisse vide pour conserver l\'existant' : '6 caractères minimum — requis';
+  fitWindow();
+}
+existingServerCheckbox.addEventListener('change', applyExistingServerMode);
+applyExistingServerMode();
+
 // Boutons « Parcourir… » : ouvrent l'explorateur Windows et remplissent le champ de dossier.
 document.querySelectorAll('.browse-btn').forEach(btn => {
   btn.addEventListener('click', async () => {
@@ -112,12 +129,14 @@ $('setupForm').addEventListener('submit', async (e) => {
   $('setupError').textContent = '';
   const body = {
     installDir: $('installDir').value.trim(),
+    existingServer: existingServerCheckbox.checked,
     steamCmdDir: $('steamCmdDir').value.trim(),
     serverName: $('serverName').value.trim(),
     serverPassword: $('serverPassword').value,
     adminPassword: $('adminPassword').value,
     maxPlayers: $('maxPlayers').value,
     port: $('port').value,
+    queryPort: $('queryPort').value,
     restApiPort: $('restApiPort').value,
     backupDir: $('backupDir').value.trim()
   };

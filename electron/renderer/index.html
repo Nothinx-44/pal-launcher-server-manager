@@ -83,7 +83,11 @@
           <h2><span class="step-num">2</span>Installer / configurer le serveur</h2>
           <p class="hint">Télécharge SteamCMD + le serveur Palworld (12–15 Go), configure <code>PalWorldSettings.ini</code>, crée les services Windows (serveur + dashboard) et la règle de pare-feu. NSSM est téléchargé automatiquement.</p>
           <form class="account-form" id="setupForm">
-            <div class="field wide"><span>Dossier d'installation</span>
+            <label class="switch-row" style="margin-bottom:4px;">
+              <input type="checkbox" id="existingServer"> J'ai déjà un serveur Palworld installé (ne pas re-télécharger)
+            </label>
+            <p class="muted-hint" id="existingServerHint" style="display:none; margin-bottom:8px;">Indique directement le dossier qui contient <code>PalServer.exe</code> (pas besoin du sous-dossier "Server"). Les mots de passe déjà en place sont conservés si tu laisses les champs ci-dessous vides.</p>
+            <div class="field wide"><span id="installDirLabel">Dossier d'installation</span>
               <div class="path-row">
                 <input type="text" id="installDir" placeholder="ex: D:\PalworldServer">
                 <button type="button" class="browse-btn" data-target="installDir">Parcourir…</button>
@@ -103,6 +107,8 @@
               <input type="number" id="maxPlayers" placeholder="8" min="1"></label>
             <label class="field"><span>Port de jeu (UDP)</span>
               <input type="number" id="port" placeholder="8211"></label>
+            <label class="field"><span>Port de requête (Steam query)</span>
+              <input type="number" id="queryPort" placeholder="27015"></label>
             <label class="field"><span>Port API REST</span>
               <input type="number" id="restApiPort" placeholder="8212"></label>
             <div class="field wide"><span>Dossier de sauvegardes</span>
