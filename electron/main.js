@@ -9,6 +9,14 @@ const crypto = require('crypto');
 // modules lib/* (paths.js lit ces variables au chargement).
 const HOME = process.env.PALWORLD_DASHBOARD_HOME
   || path.join(process.env.ProgramData || 'C:\\ProgramData', 'PalworldDashboard');
+
+// Doit être initialisé avant tout le reste : jusqu'ici, une erreur au tout début du démarrage
+// (dossier illisible, dépendance manquante dans un build corrompu...) faisait disparaître l'app
+// en silence, sans fenêtre pour afficher quoi que ce soit. process.on('uncaughtException') étant
+// posé ici, il intercepte aussi les erreurs survenant pendant le chargement des modules suivants.
+const crashLog = require('./crashLog');
+crashLog.init(HOME, dialog);
+
 fs.mkdirSync(HOME, { recursive: true });
 process.env.PALWORLD_DASHBOARD_HOME = HOME;
 process.env.DATA_DIR = path.join(HOME, 'data');
@@ -34,6 +42,31 @@ function ensureBaseEnv() {
   if (Object.keys(updates).length) updateEnvFile(updates);
 }
 
+// Le service dashboard exécute node.exe et server.js depuis HOME/app, que materializeRuntime()
+// écrase à chaque (ré)installation. Windows verrouille un exécutable en cours d'utilisation :
+// écraser runtime/node.exe pendant que le service tourne encore échoue (EBUSY/EPERM), d'où le
+// besoin — jusqu'ici manuel — de désinstaller les services avant de réinstaller. On l'automatise :
+// arrêt du service s'il tourne, exécution de l'opération, puis redémarrage s'il tournait avant.
+async function withDashboardStopped(fn) {
+  const before = await dashboardService.status();
+  if (before.running) {
+    sendLog('Arrêt temporaire du service dashboard (mise à jour des fichiers)…');
+    await dashboardService.stop();
+    // NSSM attend déjà la fin du process, mais Windows peut mettre quelques centaines de ms à
+    // relâcher le verrou du fichier exécutable après la sortie du process.
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  try {
+    return await fn();
+  } finally {
+    if (before.running) {
+      sendLog('Redémarrage du service dashboard…');
+      try { await dashboardService.start(); }
+      catch (err) { sendLog(`Échec du redémarrage automatique du dashboard : ${err.message || err}`); }
+    }
+  }
+}
+
 let mainWindow;
 
 function createWindow() {
@@ -48,10 +81,17 @@ function createWindow() {
     webPreferences: { preload: path.join(__dirname, 'preload.js') }
   });
   mainWindow.setMenuBarVisibility(false);
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'))
+    .catch(err => crashLog.reportFatal("Échec du chargement de l'interface", err));
+  mainWindow.webContents.on('render-process-gone', (_evt, details) => {
+    crashLog.reportFatal('Interface interrompue', new Error(`render-process-gone: ${details.reason}`));
+  });
 }
 
+// Journal affiché dans l'UI pendant l'installation, ET persisté dans launcher.log (utile même
+// si l'utilisateur n'a pas eu le temps de lire l'écran, ou pour du support après coup).
 function sendLog(line) {
+  crashLog.writeLine(line);
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('setup:log', line);
 }
 
@@ -83,9 +123,11 @@ ipcMain.handle('setup:install', async (_evt, body) => {
     await serverSetup.runInstall(config, sendLog);
 
     sendLog('=== Configuration du service du dashboard ===');
-    const { appDir, nodeExe, serverJs } = await runtime.materializeRuntime(
-      { appRoot: APP_ROOT, home: HOME, packaged: app.isPackaged }, sendLog);
-    await dashboardService.install({ nodeExe, serverJs, appDir, home: HOME }, sendLog);
+    await withDashboardStopped(async () => {
+      const { appDir, nodeExe, serverJs } = await runtime.materializeRuntime(
+        { appRoot: APP_ROOT, home: HOME, packaged: app.isPackaged }, sendLog);
+      await dashboardService.install({ nodeExe, serverJs, appDir, home: HOME }, sendLog);
+    });
     ensureBaseEnv();
 
     sendLog('=== Terminé : crée un compte puis démarre le dashboard ===');
@@ -103,9 +145,11 @@ ipcMain.handle('services:install', async () => {
     sendLog('=== (Ré)installation des services ===');
     await ensureNssm(sendLog);
     await serverSetup.installGameService(saved, sendLog);
-    const { appDir, nodeExe, serverJs } = await runtime.materializeRuntime(
-      { appRoot: APP_ROOT, home: HOME, packaged: app.isPackaged }, sendLog);
-    await dashboardService.install({ nodeExe, serverJs, appDir, home: HOME }, sendLog);
+    await withDashboardStopped(async () => {
+      const { appDir, nodeExe, serverJs } = await runtime.materializeRuntime(
+        { appRoot: APP_ROOT, home: HOME, packaged: app.isPackaged }, sendLog);
+      await dashboardService.install({ nodeExe, serverJs, appDir, home: HOME }, sendLog);
+    });
     ensureBaseEnv();
     sendLog('=== Services installés ===');
     return { ok: true };
@@ -182,7 +226,7 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
-});
+}).catch(err => crashLog.reportFatal('Échec du démarrage', err));
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
