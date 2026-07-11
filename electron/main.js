@@ -44,26 +44,26 @@ function ensureBaseEnv() {
 
 // Le service dashboard exécute node.exe et server.js depuis HOME/app, que materializeRuntime()
 // écrase à chaque (ré)installation. Windows verrouille un exécutable en cours d'utilisation :
-// écraser runtime/node.exe pendant que le service tourne encore échoue (EBUSY/EPERM), d'où le
-// besoin — jusqu'ici manuel — de désinstaller les services avant de réinstaller. On l'automatise :
-// arrêt du service s'il tourne, exécution de l'opération, puis redémarrage s'il tournait avant.
+// écraser runtime/node.exe pendant que le service tourne encore échoue (EBUSY/EPERM).
+//
+// L'arrêt est INCONDITIONNEL (pas de vérification préalable via dashboardService.status()) : un
+// cas réel a montré que le statut NSSM peut ne pas refléter la réalité (rapporté "non actif" alors
+// que le fichier était bel et bien verrouillé par le process), ce qui faisait sauter l'arrêt et
+// échouer la copie. dashboardService.stop() est sans risque si le service est déjà arrêté ou même
+// pas encore enregistré (l'erreur est simplement avalée) — même principe que uninstall(), qui,
+// lui, fonctionnait de façon fiable.
 async function withDashboardStopped(fn) {
-  const before = await dashboardService.status();
-  if (before.running) {
-    sendLog('Arrêt temporaire du service dashboard (mise à jour des fichiers)…');
-    await dashboardService.stop();
-    // NSSM attend déjà la fin du process, mais Windows peut mettre quelques centaines de ms à
-    // relâcher le verrou du fichier exécutable après la sortie du process.
-    await new Promise(resolve => setTimeout(resolve, 1000));
-  }
+  sendLog('Arrêt du service dashboard (au cas où il tournerait) avant mise à jour des fichiers…');
+  try { await dashboardService.stop(); } catch (_) {}
+  // Laisse le temps à Windows de relâcher le verrou du fichier exécutable après la sortie du process.
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
   try {
     return await fn();
   } finally {
-    if (before.running) {
-      sendLog('Redémarrage du service dashboard…');
-      try { await dashboardService.start(); }
-      catch (err) { sendLog(`Échec du redémarrage automatique du dashboard : ${err.message || err}`); }
-    }
+    sendLog('Démarrage du service dashboard…');
+    try { await dashboardService.start(); }
+    catch (err) { sendLog(`Le service dashboard ne s'est pas relancé automatiquement : ${err.message || err}`); }
   }
 }
 
@@ -136,7 +136,7 @@ ipcMain.handle('setup:install', async (_evt, body) => {
     });
     ensureBaseEnv();
 
-    sendLog('=== Terminé : crée un compte puis démarre le dashboard ===');
+    sendLog('=== Terminé : le dashboard est démarré, crée maintenant un compte pour t\'y connecter ===');
     return { ok: true };
   } catch (err) {
     sendLog(`ERREUR : ${err.message || err}`);
