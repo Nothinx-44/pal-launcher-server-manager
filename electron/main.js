@@ -33,6 +33,7 @@ const { getLocalIp } = require('../lib/networkInfo');
 
 const APP_ROOT = path.join(__dirname, '..');
 const getPort = () => process.env.PORT || '3000';
+const CURRENT_VERSION = require('../package.json').version;
 
 // Secrets/valeurs minimales pour que le service dashboard démarre correctement dès le 1er lancement.
 function ensureBaseEnv() {
@@ -65,6 +66,46 @@ async function withDashboardStopped(fn) {
     try { await dashboardService.start(); }
     catch (err) { sendLog(`Le service dashboard ne s'est pas relancé automatiquement : ${err.message || err}`); }
   }
+}
+
+// Compare deux versions "x.y.z" : true si `a` est strictement plus récente que `b`.
+function isVersionNewer(a, b) {
+  const pa = String(a).split('.').map(n => parseInt(n, 10) || 0);
+  const pb = String(b).split('.').map(n => parseInt(n, 10) || 0);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) > (pb[i] || 0);
+  }
+  return false;
+}
+
+function getDeployedDashboardVersion(appDir) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(appDir, 'package.json'), 'utf-8')).version;
+  } catch (_) {
+    return null;
+  }
+}
+
+// Détecte, à l'ouverture du launcher, si le service dashboard déjà installé tourne une version
+// plus ancienne que ce launcher — et le met à jour tout seul si besoin, sans qu'aucun clic ne soit
+// nécessaire. Objectif : que quelqu'un qui ne comprend rien aux services Windows n'ait jamais à
+// se soucier de cliquer sur "(Ré)installer" après avoir juste remplacé l'.exe par une nouvelle
+// version — jusqu'ici, la mise à jour du service exigeait cette action manuelle explicite.
+async function autoUpdateDashboardIfNeeded() {
+  const { registered } = await dashboardService.status();
+  if (!registered) return; // rien à mettre à jour tant que le service n'a jamais été installé
+
+  const appDir = path.join(HOME, 'app');
+  const deployedVersion = getDeployedDashboardVersion(appDir);
+  if (deployedVersion && !isVersionNewer(CURRENT_VERSION, deployedVersion)) return; // déjà à jour
+
+  sendLog(`=== Mise à jour automatique du service dashboard détectée (v${deployedVersion || '?'} → v${CURRENT_VERSION}) ===`);
+  await withDashboardStopped(async () => {
+    const { appDir: newAppDir, nodeExe, serverJs } = await runtime.materializeRuntime(
+      { appRoot: APP_ROOT, home: HOME, packaged: app.isPackaged }, sendLog);
+    await dashboardService.install({ nodeExe, serverJs, appDir: newAppDir, home: HOME }, sendLog);
+  });
+  sendLog('=== Mise à jour automatique terminée ===');
 }
 
 let mainWindow;
@@ -232,6 +273,9 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+  // Non bloquant : la fenêtre s'affiche immédiatement, la mise à jour (si nécessaire) tourne en
+  // parallèle et son avancement apparaît dans le journal comme n'importe quelle autre opération.
+  autoUpdateDashboardIfNeeded().catch(err => crashLog.reportFatal('Échec de la mise à jour automatique du dashboard', err));
 }).catch(err => crashLog.reportFatal('Échec du démarrage', err));
 
 app.on('window-all-closed', () => {
