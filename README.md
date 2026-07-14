@@ -10,6 +10,7 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/Nothinx-44/palworld-launcher-server-manager/total?style=flat-square&logo=github)](https://github.com/Nothinx-44/palworld-launcher-server-manager/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![Windows](https://img.shields.io/badge/platform-Windows-0078D4?style=flat-square&logo=windows)](https://github.com/Nothinx-44/palworld-launcher-server-manager/releases)
+[![Languages](https://img.shields.io/badge/languages-EN%20%7C%20FR%20%7C%20ZH%20%7C%20ES-brightgreen?style=flat-square)](#)
 
 <div align="center">
 
@@ -86,7 +87,7 @@ Then open `http://localhost:3000` and log in.
 - 🔓 Open source (MIT license)
 - 🧪 Full test suite (`npm test`)
 - 📡 REST API for custom tools
-- 🌍 Multi-language (FR/EN)
+- 🌍 Multi-language: English, Français, 中文 (Chinese), Español (Spanish) — dashboard, desktop app & Discord notifications
 
 ### 📸 What It Looks Like
 
@@ -225,7 +226,7 @@ Puis ouvre `http://localhost:3000` et connecte-toi.
 - 🔓 Open source (MIT)
 - 🧪 Suite de tests complète (`npm test`)
 - 📡 API REST pour outils custom
-- 🌍 Multilingue (FR/EN)
+- 🌍 Multilingue : anglais, français, 中文 (chinois), español (espagnol) — dashboard, appli desktop & notifications Discord
 
 ### 📸 À Quoi Ça Ressemble
 
