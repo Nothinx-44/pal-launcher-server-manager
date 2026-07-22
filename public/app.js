@@ -572,7 +572,7 @@ function showPlayerMenu(anchorEl, userId, name) {
   setTimeout(() => document.addEventListener('click', closePlayerMenuOnOutsideClick), 0);
 }
 
-// ---------- Bases (issues de /v1/api/game-data, sondé côté serveur toutes les 5 min) ----------
+// ---------- Bases (issues de l'API PalDefender, sondée côté serveur toutes les 5 min) ----------
 let lastBasesData = [];
 let basesFilter = '';
 let basesPdConfigured = true; // mis à jour par refreshBases (guildes + bases viennent de PalDefender)
@@ -633,6 +633,144 @@ document.getElementById('basesFilter').addEventListener('input', e => {
   basesFilter = e.target.value;
   renderBases(lastBasesData);
 });
+
+// ---------- Graphique de fréquentation (joueurs en ligne, 24 h / 7 j) ----------
+// Une seule série : ligne accent + aplat léger, grille discrète, crosshair + infobulle au survol.
+// Les points c=null (serveur injoignable) créent un trou dans la courbe plutôt qu'un faux zéro.
+let countsRange = '24h';
+let countsPoints = [];
+
+function drawCountsChart() {
+  const canvas = document.getElementById('countsChart');
+  const empty = document.getElementById('countsEmpty');
+  const peakEl = document.getElementById('countsPeak');
+  if (!canvas) return;
+  const withData = countsPoints.filter(p => p.c != null);
+  const hasData = withData.length >= 2;
+  canvas.style.display = hasData ? 'block' : 'none';
+  empty.style.display = hasData ? 'none' : 'block';
+  if (!hasData) { peakEl.textContent = ''; return; }
+
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || canvas.parentElement.clientWidth;
+  const h = 160;
+  if (!w) {
+    // Largeur 0 : deux cas. Si l'onglet est masqué (offsetParent null), on n'insiste pas — le
+    // passage sur l'onglet Tableau de bord relancera le rendu (voir activateTab). Sinon (onglet
+    // visible mais layout pas encore calculé, ex. tout premier rendu), on retente au prochain frame.
+    if (canvas.offsetParent !== null) requestAnimationFrame(drawCountsChart);
+    return;
+  }
+  canvas.width = Math.round(w * dpr);
+  canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const now = Date.now();
+  const rangeMs = countsRange === '7d' ? 7 * 24 * 3600e3 : 24 * 3600e3;
+  const t0 = now - rangeMs;
+  const maxC = Math.max(1, ...withData.map(p => p.c));
+  const pad = { l: 28, r: 8, t: 8, b: 20 };
+  const x = t => pad.l + ((t - t0) / rangeMs) * (w - pad.l - pad.r);
+  const y = c => pad.t + (1 - c / maxC) * (h - pad.t - pad.b);
+
+  // Grille horizontale discrète (0, moitié, max) + libellés d'axe en encre atténuée
+  ctx.strokeStyle = 'rgba(139, 150, 165, 0.15)';
+  ctx.fillStyle = 'rgba(139, 150, 165, 0.8)';
+  ctx.font = '10px sans-serif';
+  ctx.lineWidth = 1;
+  [0, Math.ceil(maxC / 2), maxC].forEach(v => {
+    const gy = y(v);
+    ctx.beginPath(); ctx.moveTo(pad.l, gy); ctx.lineTo(w - pad.r, gy); ctx.stroke();
+    ctx.fillText(String(v), 4, gy + 3);
+  });
+  // Repères temporels : 4 ticks, format heure (24 h) ou jour (7 j)
+  for (let i = 0; i <= 3; i++) {
+    const t = t0 + (rangeMs * i) / 3;
+    const label = countsRange === '7d'
+      ? new Date(t).toLocaleDateString(undefined, { weekday: 'short' })
+      : new Date(t).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    ctx.fillText(label, Math.min(x(t), w - 34), h - 6);
+  }
+
+  // Segments continus (coupés aux trous null) : aplat léger puis ligne 2px
+  const segments = [];
+  let seg = [];
+  countsPoints.forEach(p => {
+    if (p.c == null) { if (seg.length) segments.push(seg); seg = []; }
+    else seg.push(p);
+  });
+  if (seg.length) segments.push(seg);
+
+  segments.forEach(s => {
+    if (s.length < 2) return;
+    ctx.beginPath();
+    s.forEach((p, i) => (i ? ctx.lineTo(x(p.t), y(p.c)) : ctx.moveTo(x(p.t), y(p.c))));
+    ctx.lineTo(x(s[s.length - 1].t), y(0));
+    ctx.lineTo(x(s[0].t), y(0));
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(226, 152, 74, 0.12)';
+    ctx.fill();
+    ctx.beginPath();
+    s.forEach((p, i) => (i ? ctx.lineTo(x(p.t), y(p.c)) : ctx.moveTo(x(p.t), y(p.c))));
+    ctx.strokeStyle = '#e2984a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  });
+
+  // Pic sur la fenêtre
+  const peak = withData.reduce((a, b) => (b.c > a.c ? b : a));
+  peakEl.textContent = `${t('Pic :')} ${peak.c} — ${new Date(peak.t).toLocaleString()}`;
+
+  canvas._chart = { x, y, w, h, pad }; // partagé avec le survol
+}
+
+async function refreshCounts() {
+  const data = await api('GET', `/api/player-counts?range=${countsRange}`);
+  if (!data) return;
+  countsPoints = data.points || [];
+  drawCountsChart();
+}
+
+document.querySelectorAll('.chart-range-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    countsRange = btn.dataset.range;
+    document.querySelectorAll('.chart-range-btn').forEach(b => b.classList.toggle('active', b === btn));
+    refreshCounts();
+  });
+});
+
+// Survol : crosshair implicite via le point le plus proche + infobulle
+(function initCountsHover() {
+  const canvas = document.getElementById('countsChart');
+  const tooltip = document.getElementById('countsTooltip');
+  if (!canvas || !tooltip) return;
+  canvas.addEventListener('mousemove', e => {
+    const chart = canvas._chart;
+    if (!chart || !countsPoints.length) return;
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    let nearest = null;
+    let best = Infinity;
+    countsPoints.forEach(p => {
+      const d = Math.abs(chart.x(p.t) - mx);
+      if (d < best) { best = d; nearest = p; }
+    });
+    if (!nearest || best > 30) { tooltip.style.display = 'none'; return; }
+    const when = new Date(nearest.t).toLocaleString();
+    tooltip.innerHTML = nearest.c == null
+      ? `${when}<br><strong>${t('Serveur hors ligne')}</strong>`
+      : `${when}<br><strong>${nearest.c}</strong> ${t('joueur(s)')}`;
+    tooltip.style.display = 'block';
+    const tx = Math.min(chart.x(nearest.t) + 10, rect.width - tooltip.offsetWidth - 4);
+    tooltip.style.left = `${Math.max(0, tx)}px`;
+    tooltip.style.top = '8px';
+  });
+  canvas.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+})();
+
+window.addEventListener('resize', drawCountsChart);
 
 let lastHistoryData = null;
 let allPlayersFilter = '';
@@ -1372,6 +1510,9 @@ function activateTab(name) {
   localStorage.setItem('activeTab', name);
   // La carte a besoin d'un redraw quand son onglet devient visible (canvas de taille nulle avant)
   if (name === 'map') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  // Idem pour le graphique de fréquentation (onglet Tableau de bord) : redraw à l'affichage, sinon
+  // il reste vide s'il a été rendu alors que l'onglet était masqué (dernier onglet visité ≠ dash).
+  if (name === 'dash') requestAnimationFrame(drawCountsChart);
   if (name === 'plugins') { refreshPlugins(); refreshPaldefenderApiStatus(); }
 }
 
@@ -1397,9 +1538,11 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   refreshPaldefenderApiStatus();
   refreshDashboardUpdate();
   refreshBases();
+  refreshCounts();
   setInterval(refreshStatus, 15000);
   setInterval(refreshActivity, 30000);
   setInterval(refreshPlayerHistory, 30000);
   setInterval(refreshDiskSpace, 5 * 60000);
   setInterval(refreshBases, 5 * 60000); // les bases changent rarement, même cadence que le sondage serveur
+  setInterval(refreshCounts, 5 * 60000); // la fréquentation gagne un point toutes les 5 min
 })();

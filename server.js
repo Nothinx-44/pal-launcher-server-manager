@@ -17,6 +17,7 @@ const discord = require('./lib/discord');
 const activityLog = require('./lib/activityLog');
 const playerTracker = require('./lib/playerTracker');
 const baseTracker = require('./lib/baseTracker');
+const playerCounts = require('./lib/playerCounts');
 const watchdog = require('./lib/watchdog');
 const users = require('./lib/users');
 const steamUpdate = require('./lib/steamUpdate');
@@ -309,7 +310,7 @@ app.get('/api/status', requireAuth, async (req, res) => {
       return res.json({ online: false, scheduledRestartAt: scheduledRestart ? scheduledRestart.at : null });
     }
     const players = normalizePlayers(playersRes.status === 200 ? playersRes.data.players || [] : []);
-    // Guilde : /v1/api/players ne la fournit pas (seul /v1/api/game-data l'a) — enrichissement
+    // Guilde : /v1/api/players ne la fournit pas (elle vient de l'API PalDefender) — enrichissement
     // depuis le registre persistant, mis à jour séparément par baseTracker (moins fréquent, cet
     // endpoint étant plus lourd). Peut donc retarder de quelques minutes après une connexion.
     const guilds = playerTracker.guildByUserId();
@@ -1129,7 +1130,7 @@ app.get('/api/players/history', requireAuth, (req, res) => {
   });
 });
 
-// ---------- Bases (issues de /v1/api/game-data, sondé par lib/baseTracker.js) ----------
+// ---------- Bases (issues de l'API PalDefender, sondée par lib/baseTracker.js) ----------
 // Positions de base, pas plus sensible que les positions joueurs déjà visibles sur la carte pour
 // tout le monde : lecture ouverte à tout utilisateur connecté (pas réservé aux managers).
 app.get('/api/bases', requireAuth, (req, res) => {
@@ -1140,6 +1141,12 @@ app.get('/api/bases', requireAuth, (req, res) => {
     // c'est vide quand PalDefender n'est pas configuré, plutôt que de laisser l'utilisateur perplexe.
     paldefenderConfigured: !!process.env.PALDEFENDER_API_TOKEN
   });
+});
+
+// ---------- Fréquentation (nombre de joueurs en ligne, échantillonné par lib/playerCounts.js) ----------
+app.get('/api/player-counts', requireAuth, (req, res) => {
+  const range = req.query.range === '7d' ? 7 * 24 * 3600 * 1000 : 24 * 3600 * 1000;
+  res.json({ points: playerCounts.points(range) });
 });
 
 // Diagnostic (admin) : /v1/api/game-data (Palworld vanilla) est absent sur certaines versions
@@ -1252,7 +1259,8 @@ setInterval(checkDiskSpace, 30 * 60 * 1000);
 
 // Suivi des joueurs (sessions/temps de jeu) et watchdog anti-crash tournent en continu
 playerTracker.start(60000);
-baseTracker.start(); // guildes + bases (game-data), sondé bien moins souvent (5 min par défaut)
+baseTracker.start(); // guildes + bases (API PalDefender), sondé bien moins souvent (5 min par défaut)
+playerCounts.start(); // fréquentation : un point toutes les 5 min, 7 jours d'historique
 watchdog.start();
 
 // ---------- Pages ----------

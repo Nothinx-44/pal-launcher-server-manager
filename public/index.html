@@ -136,6 +136,20 @@
         </div>
       </div>
 
+      <div class="panel">
+        <h2>Fréquentation</h2>
+        <div class="chart-range-row">
+          <button class="action chart-range-btn active" data-range="24h" type="button">24 h</button>
+          <button class="action chart-range-btn" data-range="7d" type="button">7 jours</button>
+          <span class="muted-hint" id="countsPeak"></span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="countsChart" height="160"></canvas>
+          <div id="countsTooltip" class="chart-tooltip" style="display:none;"></div>
+        </div>
+        <p class="empty" id="countsEmpty" style="display:none;">Pas encore assez de données — la courbe se remplit toutes les 5 minutes.</p>
+      </div>
+
       <div class="panel" data-manager-only>
         <h2>Annonce</h2>
         <form class="announce-form" id="announceForm">

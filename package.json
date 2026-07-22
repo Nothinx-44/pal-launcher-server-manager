@@ -1,6 +1,6 @@
 {
   "name": "palworld-launcher-server-manager",
-  "version": "1.1.28",
+  "version": "1.1.29",
   "description": "Pal Launcher Server Manager — pilote un serveur Palworld dédié (start/stop/restart, sauvegardes, joueurs) depuis une appli desktop, aucun prérequis",
   "author": "Vincent",
   "main": "electron/main.js",
@@ -38,7 +38,12 @@
       "public/**/*",
       "server.js",
       ".env.example",
-      "package.json"
+      "package.json",
+      "!**/node_modules/**/prebuilds/darwin*/**",
+      "!**/node_modules/**/prebuilds/linux*/**",
+      "!**/node_modules/**/prebuilds/win32-arm64/**",
+      "!**/node_modules/**/*.gz",
+      "!**/node_modules/**/*.{md,map,ts,mts,cts}"
     ],
     "extraResources": [
       {
@@ -47,9 +52,13 @@
       }
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        "nsis",
+        "zip"
+      ],
       "icon": "build/icon.ico",
-      "requestedExecutionLevel": "requireAdministrator"
+      "requestedExecutionLevel": "requireAdministrator",
+      "artifactName": "PalLauncherServerManager-${version}-portable.${ext}"
     },
     "nsis": {
       "artifactName": "PalLauncherServerManager-Setup.exe",
