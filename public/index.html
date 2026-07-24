@@ -229,6 +229,24 @@
           <p class="empty" id="bansEmpty" style="display:none;">Aucun joueur banni.</p>
         </div>
       </div>
+
+      <div class="panel">
+        <h2>Chat en jeu</h2>
+        <input type="text" id="chatFilter" class="filter-input" placeholder="Filtrer (pseudo, message…)" style="width:100%; margin-bottom:10px;">
+        <ul class="chat-list" id="chatList"></ul>
+        <p class="empty" id="chatEmpty" style="display:none;">Aucun message de chat pour le moment.</p>
+        <div class="btn-row" id="chatPager" style="justify-content:space-between; align-items:center; margin-top:10px; display:none;">
+          <button class="action" id="chatPrev" type="button">← Précédent</button>
+          <span class="muted-hint" id="chatPageInfo" style="display:block;"></span>
+          <button class="action" id="chatNext" type="button">Suivant →</button>
+        </div>
+        <p class="muted-hint" id="chatHint" style="display:none;"></p>
+        <form class="chat-compose" id="chatCompose" data-manager-only autocomplete="off">
+          <input type="text" id="chatInput" maxlength="200" placeholder="Écrire dans le chat du jeu…">
+          <button class="action primary" id="chatSend" type="submit">Envoyer</button>
+        </form>
+        <p class="muted-hint" id="chatSendHint" data-manager-only style="display:none;"></p>
+      </div>
     </section>
 
     <!-- ============ SAUVEGARDES ============ -->

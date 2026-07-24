@@ -31,6 +31,7 @@ const networkInfo = require('./lib/networkInfo');
 const plugins = require('./lib/plugins');
 const { updateEnvFile } = require('./lib/envFile');
 const { readTail } = require('./lib/logTail');
+const chatHistory = require('./lib/chatHistory');
 const paldefenderApi = require('./lib/paldefenderApi');
 const dashboardUpdate = require('./lib/dashboardUpdate');
 
@@ -963,6 +964,34 @@ app.get('/api/console', requireAuth, (req, res) => {
   res.json({ lines });
 });
 
+// Chat en jeu : historique archivé par lib/chatHistory (suivi continu de console.log), du plus
+// récent au plus ancien. Lecture pour tout utilisateur connecté.
+app.get('/api/chat', requireAuth, (req, res) => {
+  res.json({ messages: chatHistory.messages() });
+});
+
+// Envoie un message dans le chat du jeu via le Broadcast de PalDefender. Le nom affiché en jeu est
+// le pseudo du compte dashboard. Managers uniquement (comme les annonces). Le message est aussi
+// archivé immédiatement pour un retour visuel instantané (l'écho console.log est ensuite ignoré).
+app.post('/api/chat', requireAuth, requireManager, async (req, res) => {
+  const message = ((req.body && req.body.message) || '').trim();
+  if (!message) return res.status(400).json({ error: 'message_required' });
+  const sender = req.session.user.username;
+  try {
+    // Le Broadcast de PalDefender n'accepte QUE `Message` (pas de champ expéditeur : il s'affiche
+    // sinon sous "system"). On préfixe donc le pseudo dans le texte pour qu'il soit visible en jeu.
+    await paldefenderApi.COMMANDS.broadcast.run(null, { Message: `${sender}: ${message}` });
+    await chatHistory.record(sender, message);
+    activityLog.log(sender, 'chat-send', message);
+    res.json({ ok: true });
+  } catch (err) {
+    const m = String(err.message || err);
+    if (m === 'paldefender_not_configured') return res.status(409).json({ error: 'not_configured' });
+    if (m === 'paldefender_invalid_token') return res.status(409).json({ error: 'invalid_token' });
+    res.status(500).json({ error: m });
+  }
+});
+
 // Active la redirection console sur un service existant (serveurs installés avant que le
 // dashboard configure la redirection à l'installation). Effet au prochain démarrage du serveur.
 app.post('/api/console/enable', requireAuth, requireManager, async (req, res) => {
@@ -1261,6 +1290,7 @@ setInterval(checkDiskSpace, 30 * 60 * 1000);
 playerTracker.start(60000);
 baseTracker.start(); // guildes + bases (API PalDefender), sondé bien moins souvent (5 min par défaut)
 playerCounts.start(); // fréquentation : un point toutes les 5 min, 7 jours d'historique
+chatHistory.start(); // chat en jeu : suit console.log toutes les 5 s, 30 j d'historique
 watchdog.start();
 
 // ---------- Pages ----------

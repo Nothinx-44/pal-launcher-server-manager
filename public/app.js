@@ -462,6 +462,7 @@ function renderActivityPage() {
     'backup-failed': 'échec de la sauvegarde planifiée',
     'backup-import': 'a importé une sauvegarde',
     'console-enable': 'a activé la console serveur',
+    'chat-send': 'a écrit dans le chat du jeu',
     'backup-restore-error': 'a échoué à restaurer une sauvegarde',
     'plugin-install': 'a installé un plugin',
     'plugin-uninstall': 'a désinstallé un plugin',
@@ -513,6 +514,98 @@ function renderActivityPage() {
 document.getElementById('activityPrev').addEventListener('click', () => { activityPage--; renderActivityPage(); });
 document.getElementById('activityNext').addEventListener('click', () => { activityPage++; renderActivityPage(); });
 document.getElementById('activityFilter').addEventListener('input', e => { activityFilter = e.target.value; activityPage = 0; renderActivityPage(); });
+
+// ---------- Chat en jeu (lignes [Chat::*] de la console serveur) ----------
+let chatMessages = [];
+let chatFilter = '';
+let chatPage = 0;
+const CHAT_PER_PAGE = 50;
+const chatList = document.getElementById('chatList');
+
+async function refreshChat() {
+  const hint = document.getElementById('chatHint');
+  const res = await fetch('/api/chat');
+  if (res.status === 404) {
+    // Console non activée ou serveur pas encore installé : on l'indique au lieu de rester vide.
+    chatMessages = [];
+    renderChat();
+    if (hint) {
+      const data = await res.json().catch(() => ({}));
+      hint.textContent = data.error === 'console_not_enabled'
+        ? 'ℹ️ Le chat apparaîtra après le prochain démarrage du serveur (console à activer dans Réglages).'
+        : 'ℹ️ Serveur non installé.';
+      hint.style.display = 'block';
+    }
+    return;
+  }
+  if (hint) hint.style.display = 'none';
+  const data = await res.json().catch(() => null);
+  if (!data) return;
+  chatMessages = data.messages || [];
+  renderChat();
+}
+
+function renderChat() {
+  if (!chatList) return;
+  const q = chatFilter.trim().toLowerCase();
+  const filtered = q
+    ? chatMessages.filter(m => `${m.name} ${m.message}`.toLowerCase().includes(q))
+    : chatMessages;
+  const empty = document.getElementById('chatEmpty');
+  const pager = document.getElementById('chatPager');
+  if (!filtered.length) {
+    chatList.innerHTML = '';
+    if (pager) pager.style.display = 'none';
+    if (empty) {
+      empty.textContent = chatMessages.length ? 'Aucun résultat pour ce filtre.' : 'Aucun message de chat pour le moment.';
+      empty.style.display = 'block';
+    }
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  const totalPages = Math.ceil(filtered.length / CHAT_PER_PAGE);
+  chatPage = Math.max(0, Math.min(chatPage, totalPages - 1));
+  const start = chatPage * CHAT_PER_PAGE;
+  chatList.innerHTML = filtered.slice(start, start + CHAT_PER_PAGE).map(m => {
+    const chan = m.channel && m.channel !== 'Global' ? `<span class="chat-chan">${escapeHtml(m.channel)}</span>` : '';
+    return `<li><span class="chat-time">${escapeHtml(m.time || '')}</span>`
+      + `<span class="chat-author">${escapeHtml(m.name || '—')}</span>${chan}`
+      + `<span class="chat-msg">${escapeHtml(m.message || '')}</span></li>`;
+  }).join('');
+  if (pager) {
+    pager.style.display = totalPages > 1 ? 'flex' : 'none';
+    document.getElementById('chatPageInfo').textContent = `Page ${chatPage + 1} / ${totalPages}`;
+    document.getElementById('chatPrev').disabled = chatPage === 0;
+    document.getElementById('chatNext').disabled = chatPage >= totalPages - 1;
+  }
+}
+
+document.getElementById('chatFilter').addEventListener('input', e => { chatFilter = e.target.value; chatPage = 0; renderChat(); });
+document.getElementById('chatPrev').addEventListener('click', () => { chatPage--; renderChat(); });
+document.getElementById('chatNext').addEventListener('click', () => { chatPage++; renderChat(); });
+
+const chatCompose = document.getElementById('chatCompose');
+chatCompose.addEventListener('submit', async e => {
+  e.preventDefault();
+  const input = document.getElementById('chatInput');
+  const message = input.value.trim();
+  if (!message) return;
+  const btn = document.getElementById('chatSend');
+  btn.disabled = true;
+  const r = await api('POST', '/api/chat', { message });
+  btn.disabled = false;
+  if (r && r.ok) {
+    input.value = '';
+    refreshChat();
+  } else {
+    const hint = document.getElementById('chatSendHint');
+    const err = r && r.error;
+    hint.textContent = err === 'not_configured' || err === 'invalid_token'
+      ? '⚠️ Envoi impossible : le Broadcast nécessite un jeton PalDefender valide (onglet Plugins).'
+      : "⚠️ L'envoi du message a échoué.";
+    hint.style.display = 'block';
+  }
+});
 
 // Menu contextuel sur un nom de joueur (historique) : stats globales + ban rapide.
 function closePlayerMenu() {
@@ -1514,6 +1607,7 @@ function activateTab(name) {
   // il reste vide s'il a été rendu alors que l'onglet était masqué (dernier onglet visité ≠ dash).
   if (name === 'dash') requestAnimationFrame(drawCountsChart);
   if (name === 'plugins') { refreshPlugins(); refreshPaldefenderApiStatus(); }
+  if (name === 'activity') refreshChat();
 }
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1539,8 +1633,10 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   refreshDashboardUpdate();
   refreshBases();
   refreshCounts();
+  refreshChat();
   setInterval(refreshStatus, 15000);
   setInterval(refreshActivity, 30000);
+  setInterval(refreshChat, 8000); // chat quasi temps réel (le collecteur suit le log toutes les 5 s)
   setInterval(refreshPlayerHistory, 30000);
   setInterval(refreshDiskSpace, 5 * 60000);
   setInterval(refreshBases, 5 * 60000); // les bases changent rarement, même cadence que le sondage serveur
